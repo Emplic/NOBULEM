@@ -1,4 +1,446 @@
 --[[
 https://luarmor.net
 --]]
-local c=game:GetService("CoreGui")local O=game:GetService("TweenService")local F=game:GetService("HttpService")local t=game:GetService("UserInputService")local p=game:GetService("Players")local u=p.LocalPlayer if(getgenv()).nobulemKeySystemLoaded then game.Players.LocalPlayer:Kick("Maximum load attempts reached!")return end;(getgenv()).nobulemKeySystemLoaded=true local K=(loadstring(game:HttpGet("https://zekehub.com/scripts/Utility/NotificationLib.lua")))()local z=(loadstring(game:HttpGet("https://raw.githubusercontent.com/deividcomsono/lucide-roblox-direct/refs/heads/main/source.lua")))()local N={Title="nobulem.wtf";Subtitle="Enter your access key to continue";GetKeyLink="nobulem.wtf/key",DiscordLink="https://discord.gg/mugcSRnpuG";LuarmorId="dfd60575e93fbaacae09e64352bd227f"}local function n(c)if writefile and(isfolder and makefolder)then if not isfolder("nobulem")then makefolder("nobulem")end writefile("nobulem/key.txt",c)end end local function y()if readfile and(isfile and isfile("nobulem/key.txt"))then return readfile("nobulem/key.txt")end return nil end local function b()if delfile and(isfile and isfile("nobulem/key.txt"))then delfile("nobulem/key.txt")end end local function A(c)if not c or c<=0 or c==-1 then return"Lifetime"end local O={{unit="d",seconds=86400};{unit="h",seconds=3600};{unit="m";seconds=60},{unit="s",seconds=1}}local F={}local t=c for c,O in ipairs(O)do local p=math.floor(t/O.seconds)if p>0 then table.insert(F,p..O.unit)t=t%O.seconds if#F>=2 then break end end end return#F>0 and table.concat(F," ")or"0s"end local B local function j()local c,O=pcall(function()return(loadstring(game:HttpGet("https://sdkapi-public.luarmor.net/library.lua")))()end)if c then O.script_id=N.LuarmorId return O end return nil end B=j()local Q={KEY_VALID=function(c)pcall(function()if B.purge_cache then B.purge_cache()end end)local O if c.auth_expire then if c.auth_expire==-1 then O="Lifetime"else local F=c.auth_expire-os.time()O=A(F)end else O="Unknown"end local F={"Executions: "..tostring(c.total_executions or 0);"Expires: "..O}if c.note and c.note~=""then table.insert(F,"Note: "..c.note)end K:Success("Welcome, "..u.DisplayName,table.concat(F,"\n"),8)if c.key then n(c.key)end task.delay(.5,function()(loadstring(game:HttpGet("https://api.luarmor.net/files/v3/loaders/dfd60575e93fbaacae09e64352bd227f.lua")))()end)return true,"Valid key"end;KEY_HWID_LOCKED=function(c)K:Warning("HWID Mismatch","This key is linked to another device\nReset via Dashboard or Discord\n\nClick to copy Discord invite",12,function()setclipboard(N.DiscordLink)end)return false,"HWID locked"end,KEY_EXPIRED=function(c)K:Error("Subscription Expired","Your key has expired\nRenew to continue using nobulem.wtf\n\nClick to copy Discord invite",12,function()setclipboard(N.DiscordLink)end)return false,"Key expired"end,KEY_BANNED=function(c)K:Error("Access Revoked","This key has been blacklisted\nContact support if you believe this is an error\n\nClick to copy Discord invite",12,function()setclipboard(N.DiscordLink)end)return false,"Key banned"end;KEY_INCORRECT=function(c)K:Error("Invalid Key","Key not found in database\nDiscord invite copied to clipboard\n\nClick to copy again",12,function()setclipboard(N.DiscordLink)end)return false,"Key incorrect"end}local function a(c)if not B then return false,"Failed to connect to authentication server"end local O=B.check_key(c)local F=(Q)[O.code]if F then O.data=O.data or{}O.data.key=c return F(O.data)end K:Error("Authentication Error","Code: "..(tostring(O.code)..("\n"..(O.message or"Unknown error"))),8,function()setclipboard(N.DiscordLink)end)return false,O.message or"Authentication failed"end local function i(c,O)local F=z.GetAsset(O)if F then c.Image=F.Url c.ImageRectSize=F.ImageRectSize c.ImageRectOffset=F.ImageRectOffset end end local M=y()if M and M~=""then local c,O=a(M)if c then return else b()end end local q=Instance.new("ScreenGui")q.Name="NobulemKeySystem"q.Parent=c q.ZIndexBehavior=Enum.ZIndexBehavior.Sibling q.IgnoreGuiInset=true local R=Instance.new("Frame")R.Size=UDim2.fromOffset(400,260)R.AnchorPoint=Vector2.new(.5,.5)R.Position=UDim2.fromScale(.5,.5)R.BackgroundColor3=Color3.fromRGB(10,10,14)R.BorderSizePixel=0 R.ClipsDescendants=true R.BackgroundTransparency=1 R.Parent=q local L=Instance.new("UICorner")L.CornerRadius=UDim.new(0,8)L.Parent=R local I=Instance.new("UIStroke")I.Color=Color3.fromRGB(35,35,45)I.Thickness=1 I.Transparency=1 I.Parent=R local E=Instance.new("Frame")E.Size=UDim2.new(1,0,0,2)E.BackgroundColor3=Color3.fromRGB(19,128,225)E.BorderSizePixel=0 E.Parent=R local J=Instance.new("Frame")J.Size=UDim2.new(1,-40,1,-40)J.Position=UDim2.fromOffset(20,20)J.BackgroundTransparency=1 J.Parent=R local k=Instance.new("TextLabel")k.Text=N.Title k.Font=Enum.Font.GothamBold k.TextColor3=Color3.fromRGB(255,255,255)k.TextSize=22 k.Size=UDim2.new(1,0,0,24)k.BackgroundTransparency=1 k.TextXAlignment=Enum.TextXAlignment.Left k.TextTransparency=1 k.Parent=J local Z=Instance.new("TextLabel")Z.Text=N.Subtitle Z.Font=Enum.Font.Gotham Z.TextColor3=Color3.fromRGB(170,170,185)Z.TextSize=13 Z.Size=UDim2.new(1,0,0,14)Z.Position=UDim2.fromOffset(0,30)Z.BackgroundTransparency=1 Z.TextXAlignment=Enum.TextXAlignment.Left Z.TextTransparency=1 Z.Parent=J local m=Instance.new("Frame")m.Size=UDim2.new(1,0,0,44)m.Position=UDim2.fromOffset(0,70)m.BackgroundColor3=Color3.fromRGB(20,20,26)m.BorderSizePixel=0 m.BackgroundTransparency=1 m.Parent=J local h=Instance.new("UICorner")h.CornerRadius=UDim.new(0,6)h.Parent=m local g=Instance.new("UIStroke")g.Color=Color3.fromRGB(35,35,45)g.Thickness=1 g.Transparency=1 g.ApplyStrokeMode=Enum.ApplyStrokeMode.Border g.Parent=m local X=Instance.new("ImageLabel")X.Size=UDim2.fromOffset(20,20)X.Position=UDim2.fromOffset(12,12)X.BackgroundTransparency=1 X.ImageColor3=Color3.fromRGB(88,166,255)X.ImageTransparency=1 i(X,"key")X.Parent=m local V=Instance.new("TextBox")V.Size=UDim2.new(1,-50,1,0)V.Position=UDim2.fromOffset(42,0)V.BackgroundTransparency=1 V.Font=Enum.Font.Code V.PlaceholderText="Paste your key here..."V.PlaceholderColor3=Color3.fromRGB(90,90,100)V.TextColor3=Color3.fromRGB(255,255,255)V.TextSize=14 V.TextXAlignment=Enum.TextXAlignment.Left V.TextTransparency=1 V.Text=""V.ClearTextOnFocus=false V.Parent=m V.Focused:Connect(function()(O:Create(g,TweenInfo.new(.3),{Color=Color3.fromRGB(88,166,255)})):Play()end)V.FocusLost:Connect(function()(O:Create(g,TweenInfo.new(.3),{Color=Color3.fromRGB(35,35,45)})):Play()end)local function T(c,F,t,p,u,K)local z=Instance.new("TextButton")z.Size=UDim2.new(u,-5,0,40)z.Position=p z.BackgroundColor3=Color3.fromRGB(20,20,26)z.Text=""z.AutoButtonColor=false z.BackgroundTransparency=1 z.Parent=J local N=Instance.new("UICorner")N.CornerRadius=UDim.new(0,6)N.Parent=z local n=Instance.new("UIStroke")n.Color=Color3.fromRGB(35,35,45)n.Transparency=1 n.Parent=z local y=Instance.new("ImageLabel")y.Size=UDim2.fromOffset(18,18)y.Position=UDim2.fromOffset(12,11)y.BackgroundTransparency=1 y.ImageColor3=t y.ImageTransparency=1 i(y,F)y.Parent=z local b=Instance.new("TextLabel")b.Text=c b.Size=UDim2.new(1,-30,1,0)b.Position=UDim2.fromOffset(30,0)b.BackgroundTransparency=1 b.Font=Enum.Font.GothamMedium b.TextSize=13 b.TextColor3=Color3.fromRGB(255,255,255)b.TextXAlignment=Enum.TextXAlignment.Center b.TextTransparency=1 b.Parent=z z.MouseEnter:Connect(function()(O:Create(z,TweenInfo.new(.2),{BackgroundColor3=Color3.fromRGB(30,30,38)})):Play()end)z.MouseLeave:Connect(function()(O:Create(z,TweenInfo.new(.2),{BackgroundColor3=Color3.fromRGB(20,20,26)})):Play()end)z.MouseButton1Click:Connect(K)return{z,n;y;b}end local o=T("Check Key","arrow-right",Color3.fromRGB(75,200,130),UDim2.fromOffset(0,130),1,function()local c=V.Text:gsub("%s+","")if c==""then K:Error("Input Empty","Please enter a key.",3)return end a(c)end)local H=T("Get Key","link",Color3.fromRGB(88,166,255),UDim2.fromOffset(0,180),.5,function()setclipboard(N.GetKeyLink)K:Info("Link Copied","Key link copied to clipboard.",3)end)local l=T("Discord","message-circle",Color3.fromRGB(114,137,218),UDim2.new(.5,5,0,180),.5,function()setclipboard(N.DiscordLink)K:Info("Discord Copied","Discord invite copied to clipboard.",3)end)R.BackgroundTransparency=1 I.Transparency=1 k.TextTransparency=1 Z.TextTransparency=1 m.BackgroundTransparency=1 g.Transparency=1 X.ImageTransparency=1 V.TextTransparency=1 local function W(c)(O:Create((c)[1],TweenInfo.new(.5),{BackgroundTransparency=0})):Play();(O:Create((c)[2],TweenInfo.new(.5),{Transparency=0})):Play();(O:Create((c)[3],TweenInfo.new(.5),{ImageTransparency=0})):Play();(O:Create((c)[4],TweenInfo.new(.5),{TextTransparency=0})):Play()end task.spawn(function()(O:Create(R,TweenInfo.new(.5,Enum.EasingStyle.Quint),{BackgroundTransparency=0})):Play();(O:Create(I,TweenInfo.new(.5),{Transparency=0})):Play()task.wait(.1);(O:Create(k,TweenInfo.new(.4),{TextTransparency=0})):Play();(O:Create(Z,TweenInfo.new(.4),{TextTransparency=0})):Play()task.wait(.1);(O:Create(m,TweenInfo.new(.4),{BackgroundTransparency=0})):Play();(O:Create(g,TweenInfo.new(.4),{Transparency=0})):Play();(O:Create(X,TweenInfo.new(.4),{ImageTransparency=0})):Play();(O:Create(V,TweenInfo.new(.4),{TextTransparency=0})):Play()task.wait(.1)W(o)task.wait(.1)W(H)W(l)end)
+local CoreGui = game:GetService("CoreGui")
+local TweenService = game:GetService("TweenService")
+local HttpService = game:GetService("HttpService")
+local UserInputService = game:GetService("UserInputService")
+local Players = game:GetService("Players")
+
+local LocalPlayer = Players.LocalPlayer
+
+if getgenv().nobulemKeySystemLoaded then
+    game.Players.LocalPlayer:Kick('Maximum load attempts reached!')
+    return
+end
+getgenv().nobulemKeySystemLoaded = true
+
+local NotificationLib = loadstring(game:HttpGet("https://zekehub.com/scripts/Utility/NotificationLib.lua"))()
+local Lucide = loadstring(game:HttpGet("https://raw.githubusercontent.com/deividcomsono/lucide-roblox-direct/refs/heads/main/source.lua"))()
+
+local Config = {
+    Title = "nobulem.wtf",
+    Subtitle = "Enter your access key to continue",
+    GetKeyLink = "nobulem.wtf/key",
+    DiscordLink = "https://discord.gg/mugcSRnpuG",
+    LuarmorId = "dfd60575e93fbaacae09e64352bd227f"
+}
+
+local function saveKey(key)
+    if writefile and isfolder and makefolder then
+        if not isfolder("nobulem") then makefolder("nobulem") end
+        writefile("nobulem/key.txt", key)
+    end
+end
+
+local function loadKey()
+    if readfile and isfile and isfile("nobulem/key.txt") then
+        return readfile("nobulem/key.txt")
+    end
+    return nil
+end
+
+local function clearKey()
+    if delfile and isfile and isfile("nobulem/key.txt") then
+        delfile("nobulem/key.txt")
+    end
+end
+
+local function formatDuration(seconds)
+    if not seconds or seconds <= 0 or seconds == -1 then
+        return "Lifetime"
+    end
+    
+    local units = {
+        {unit = "d", seconds = 86400},
+        {unit = "h", seconds = 3600},
+        {unit = "m", seconds = 60},
+        {unit = "s", seconds = 1}
+    }
+    
+    local parts = {}
+    local remaining = seconds
+    
+    for _, data in ipairs(units) do
+        local value = math.floor(remaining / data.seconds)
+        if value > 0 then
+            table.insert(parts, value .. data.unit)
+            remaining = remaining % data.seconds
+            if #parts >= 2 then break end
+        end
+    end
+    
+    return #parts > 0 and table.concat(parts, " ") or "0s"
+end
+
+local LuarmorAPI
+local function loadLuarmorAPI()
+    local success, api = pcall(function()
+        return loadstring(game:HttpGet("https://sdkapi-public.luarmor.net/library.lua"))()
+    end)
+    
+    if success then
+        api.script_id = Config.LuarmorId
+        return api
+    end
+    return nil
+end
+
+LuarmorAPI = loadLuarmorAPI()
+
+local KeyHandlers = {
+    KEY_VALID = function(data)
+        pcall(function()
+            if LuarmorAPI.purge_cache then
+                LuarmorAPI.purge_cache()
+            end
+        end)
+        
+        local timeLeft
+        if data.auth_expire then
+            if data.auth_expire == -1 then
+                timeLeft = "Lifetime"
+            else
+                local secondsLeft = data.auth_expire - os.time()
+                timeLeft = formatDuration(secondsLeft)
+            end
+        else
+            timeLeft = "Unknown"
+        end
+        
+        local details = {
+            "Executions: " .. tostring(data.total_executions or 0),
+            "Expires: " .. timeLeft
+        }
+        
+        if data.note and data.note ~= "" then
+            table.insert(details, "Note: " .. data.note)
+        end
+        
+        NotificationLib:Success(
+            "Welcome, " .. LocalPlayer.DisplayName,
+            table.concat(details, "\n"),
+            8
+        )
+
+        script_key = data.key
+        
+        if data.key then
+            saveKey(data.key)
+        end
+        
+        task.delay(0.5, function()
+            loadstring(game:HttpGet('https://api.luarmor.net/files/v3/loaders/dfd60575e93fbaacae09e64352bd227f.lua'))()
+        end)
+        
+        return true, "Valid key"
+    end,
+    
+    KEY_HWID_LOCKED = function(data)
+        NotificationLib:Warning(
+            "HWID Mismatch",
+            "This key is linked to another device\nReset via Dashboard or Discord\n\nClick to copy Discord invite",
+            12,
+            function()
+                setclipboard(Config.DiscordLink)
+            end
+        )
+        return false, "HWID locked"
+    end,
+    
+    KEY_EXPIRED = function(data)
+        NotificationLib:Error(
+            "Subscription Expired",
+            "Your key has expired\nRenew to continue using nobulem.wtf\n\nClick to copy Discord invite",
+            12,
+            function()
+                setclipboard(Config.DiscordLink)
+            end
+        )
+        return false, "Key expired"
+    end,
+    
+    KEY_BANNED = function(data)
+        NotificationLib:Error(
+            "Access Revoked",
+            "This key has been blacklisted\nContact support if you believe this is an error\n\nClick to copy Discord invite",
+            12,
+            function()
+                setclipboard(Config.DiscordLink)
+            end
+        )
+        return false, "Key banned"
+    end,
+    
+    KEY_INCORRECT = function(data)
+        NotificationLib:Error(
+            "Invalid Key",
+            "Key not found in database\nDiscord invite copied to clipboard\n\nClick to copy again",
+            12,
+            function()
+                setclipboard(Config.DiscordLink)
+            end
+        )
+        return false, "Key incorrect"
+    end
+}
+
+local function validateKey(key)
+    if not LuarmorAPI then 
+        return false, "Failed to connect to authentication server"
+    end
+    
+    local status = LuarmorAPI.check_key(key)
+    
+    local handler = KeyHandlers[status.code]
+    if handler then
+        status.data = status.data or {}
+        status.data.key = key
+        return handler(status.data)
+    end
+    
+    NotificationLib:Error(
+        "Authentication Error",
+        "Code: " .. tostring(status.code) .. "\n" .. (status.message or "Unknown error"),
+        8,
+        function()
+            setclipboard(Config.DiscordLink)
+        end
+    )
+    
+    return false, status.message or "Authentication failed"
+end
+
+local function setLucideIcon(imageLabel, iconName)
+    local asset = Lucide.GetAsset(iconName)
+    if asset then
+        imageLabel.Image = asset.Url
+        imageLabel.ImageRectSize = asset.ImageRectSize
+        imageLabel.ImageRectOffset = asset.ImageRectOffset
+    end
+end
+
+local saved = loadKey()
+if saved and saved ~= "" then
+    local valid, msg = validateKey(saved)
+    if valid then
+        return
+    else
+        clearKey()
+    end
+end
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "NobulemKeySystem"
+ScreenGui.Parent = CoreGui
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.IgnoreGuiInset = true
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.fromOffset(400, 260)
+MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+MainFrame.Position = UDim2.fromScale(0.5, 0.5)
+MainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 14)
+MainFrame.BorderSizePixel = 0
+MainFrame.ClipsDescendants = true
+MainFrame.BackgroundTransparency = 1
+MainFrame.Parent = ScreenGui
+
+local Corner = Instance.new("UICorner")
+Corner.CornerRadius = UDim.new(0, 8)
+Corner.Parent = MainFrame
+
+local Stroke = Instance.new("UIStroke")
+Stroke.Color = Color3.fromRGB(35, 35, 45)
+Stroke.Thickness = 1
+Stroke.Transparency = 1
+Stroke.Parent = MainFrame
+
+local TopAccent = Instance.new("Frame")
+TopAccent.Size = UDim2.new(1, 0, 0, 2)
+TopAccent.BackgroundColor3 = Color3.fromRGB(19, 128, 225)
+TopAccent.BorderSizePixel = 0
+TopAccent.Parent = MainFrame
+
+local Content = Instance.new("Frame")
+Content.Size = UDim2.new(1, -40, 1, -40)
+Content.Position = UDim2.fromOffset(20, 20)
+Content.BackgroundTransparency = 1
+Content.Parent = MainFrame
+
+local Title = Instance.new("TextLabel")
+Title.Text = Config.Title
+Title.Font = Enum.Font.GothamBold
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextSize = 22
+Title.Size = UDim2.new(1, 0, 0, 24)
+Title.BackgroundTransparency = 1
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.TextTransparency = 1
+Title.Parent = Content
+
+local Subtitle = Instance.new("TextLabel")
+Subtitle.Text = Config.Subtitle
+Subtitle.Font = Enum.Font.Gotham
+Subtitle.TextColor3 = Color3.fromRGB(170, 170, 185)
+Subtitle.TextSize = 13
+Subtitle.Size = UDim2.new(1, 0, 0, 14)
+Subtitle.Position = UDim2.fromOffset(0, 30)
+Subtitle.BackgroundTransparency = 1
+Subtitle.TextXAlignment = Enum.TextXAlignment.Left
+Subtitle.TextTransparency = 1
+Subtitle.Parent = Content
+
+local InputFrame = Instance.new("Frame")
+InputFrame.Size = UDim2.new(1, 0, 0, 44)
+InputFrame.Position = UDim2.fromOffset(0, 70)
+InputFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 26)
+InputFrame.BorderSizePixel = 0
+InputFrame.BackgroundTransparency = 1
+InputFrame.Parent = Content
+
+local InputCorner = Instance.new("UICorner")
+InputCorner.CornerRadius = UDim.new(0, 6)
+InputCorner.Parent = InputFrame
+
+local InputStroke = Instance.new("UIStroke")
+InputStroke.Color = Color3.fromRGB(35, 35, 45)
+InputStroke.Thickness = 1
+InputStroke.Transparency = 1
+InputStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+InputStroke.Parent = InputFrame
+
+local KeyIcon = Instance.new("ImageLabel")
+KeyIcon.Size = UDim2.fromOffset(20, 20)
+KeyIcon.Position = UDim2.fromOffset(12, 12)
+KeyIcon.BackgroundTransparency = 1
+KeyIcon.ImageColor3 = Color3.fromRGB(88, 166, 255)
+KeyIcon.ImageTransparency = 1
+setLucideIcon(KeyIcon, "key")
+KeyIcon.Parent = InputFrame
+
+local InputBox = Instance.new("TextBox")
+InputBox.Size = UDim2.new(1, -50, 1, 0)
+InputBox.Position = UDim2.fromOffset(42, 0)
+InputBox.BackgroundTransparency = 1
+InputBox.Font = Enum.Font.Code
+InputBox.PlaceholderText = "Paste your key here..."
+InputBox.PlaceholderColor3 = Color3.fromRGB(90, 90, 100)
+InputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+InputBox.TextSize = 14
+InputBox.TextXAlignment = Enum.TextXAlignment.Left
+InputBox.TextTransparency = 1
+InputBox.Text = ""
+InputBox.ClearTextOnFocus = false
+InputBox.Parent = InputFrame
+
+InputBox.Focused:Connect(function()
+    TweenService:Create(InputStroke, TweenInfo.new(0.3), {Color = Color3.fromRGB(88, 166, 255)}):Play()
+end)
+InputBox.FocusLost:Connect(function()
+    TweenService:Create(InputStroke, TweenInfo.new(0.3), {Color = Color3.fromRGB(35, 35, 45)}):Play()
+end)
+
+local function CreateButton(text, iconName, color, position, widthScale, callback)
+    local Btn = Instance.new("TextButton")
+    Btn.Size = UDim2.new(widthScale, -5, 0, 40)
+    Btn.Position = position
+    Btn.BackgroundColor3 = Color3.fromRGB(20, 20, 26)
+    Btn.Text = ""
+    Btn.AutoButtonColor = false
+    Btn.BackgroundTransparency = 1
+    Btn.Parent = Content
+
+    local BtnCorner = Instance.new("UICorner")
+    BtnCorner.CornerRadius = UDim.new(0, 6)
+    BtnCorner.Parent = Btn
+
+    local BtnStroke = Instance.new("UIStroke")
+    BtnStroke.Color = Color3.fromRGB(35, 35, 45)
+    BtnStroke.Transparency = 1
+    BtnStroke.Parent = Btn
+
+    local BtnIcon = Instance.new("ImageLabel")
+    BtnIcon.Size = UDim2.fromOffset(18, 18)
+    BtnIcon.Position = UDim2.fromOffset(12, 11)
+    BtnIcon.BackgroundTransparency = 1
+    BtnIcon.ImageColor3 = color
+    BtnIcon.ImageTransparency = 1
+    setLucideIcon(BtnIcon, iconName)
+    BtnIcon.Parent = Btn
+
+    local BtnText = Instance.new("TextLabel")
+    BtnText.Text = text
+    BtnText.Size = UDim2.new(1, -30, 1, 0)
+    BtnText.Position = UDim2.fromOffset(30, 0)
+    BtnText.BackgroundTransparency = 1
+    BtnText.Font = Enum.Font.GothamMedium
+    BtnText.TextSize = 13
+    BtnText.TextColor3 = Color3.fromRGB(255, 255, 255)
+    BtnText.TextXAlignment = Enum.TextXAlignment.Center
+    BtnText.TextTransparency = 1
+    BtnText.Parent = Btn
+
+    Btn.MouseEnter:Connect(function()
+        TweenService:Create(Btn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(30, 30, 38)}):Play()
+    end)
+    Btn.MouseLeave:Connect(function()
+        TweenService:Create(Btn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(20, 20, 26)}):Play()
+    end)
+    Btn.MouseButton1Click:Connect(callback)
+
+    return {Btn, BtnStroke, BtnIcon, BtnText}
+end
+
+local CheckBtnData = CreateButton("Check Key", "arrow-right", Color3.fromRGB(75, 200, 130), UDim2.fromOffset(0, 130), 1, function()
+    local key = InputBox.Text:gsub("%s+", "")
+    if key == "" then
+        NotificationLib:Error("Input Empty", "Please enter a key.", 3)
+        return
+    end
+    validateKey(key)
+end)
+
+local LinkBtnData = CreateButton("Get Key", "link", Color3.fromRGB(88, 166, 255), UDim2.fromOffset(0, 180), 0.5, function()
+    setclipboard(Config.GetKeyLink)
+    NotificationLib:Info("Link Copied", "Key link copied to clipboard.", 3)
+end)
+
+local DiscordBtnData = CreateButton("Discord", "message-circle", Color3.fromRGB(114, 137, 218), UDim2.new(0.5, 5, 0, 180), 0.5, function()
+    setclipboard(Config.DiscordLink)
+    NotificationLib:Info("Discord Copied", "Discord invite copied to clipboard.", 3)
+end)
+
+MainFrame.BackgroundTransparency = 1
+Stroke.Transparency = 1
+Title.TextTransparency = 1
+Subtitle.TextTransparency = 1
+InputFrame.BackgroundTransparency = 1
+InputStroke.Transparency = 1
+KeyIcon.ImageTransparency = 1
+InputBox.TextTransparency = 1
+
+local function FadeInButton(data)
+    TweenService:Create(data[1], TweenInfo.new(0.5), {BackgroundTransparency = 0}):Play()
+    TweenService:Create(data[2], TweenInfo.new(0.5), {Transparency = 0}):Play()
+    TweenService:Create(data[3], TweenInfo.new(0.5), {ImageTransparency = 0}):Play()
+    TweenService:Create(data[4], TweenInfo.new(0.5), {TextTransparency = 0}):Play()
+end
+
+task.spawn(function()
+    TweenService:Create(MainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {BackgroundTransparency = 0}):Play()
+    TweenService:Create(Stroke, TweenInfo.new(0.5), {Transparency = 0}):Play()
+    task.wait(0.1)
+    TweenService:Create(Title, TweenInfo.new(0.4), {TextTransparency = 0}):Play()
+    TweenService:Create(Subtitle, TweenInfo.new(0.4), {TextTransparency = 0}):Play()
+    task.wait(0.1)
+    TweenService:Create(InputFrame, TweenInfo.new(0.4), {BackgroundTransparency = 0}):Play()
+    TweenService:Create(InputStroke, TweenInfo.new(0.4), {Transparency = 0}):Play()
+    TweenService:Create(KeyIcon, TweenInfo.new(0.4), {ImageTransparency = 0}):Play()
+    TweenService:Create(InputBox, TweenInfo.new(0.4), {TextTransparency = 0}):Play()
+    task.wait(0.1)
+    FadeInButton(CheckBtnData)
+    task.wait(0.1)
+    FadeInButton(LinkBtnData)
+    FadeInButton(DiscordBtnData)
+end)
