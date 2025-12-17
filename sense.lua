@@ -219,7 +219,7 @@ function EspObject:Update()
 	self.character = interface.getCharacter(self.player);
 	self.health, self.maxHealth = interface.getHealth(self.player);
 	self.weapon = interface.getWeapon(self.player);
-	self.enabled = self.options.enabled and self.character and not
+	self.enabled = self.options.enabled and self.character and self.health > 0 and not
 		(#interface.whitelist > 0 and not find(interface.whitelist, self.player.UserId));
 
 	local head = self.enabled and findFirstChild(self.character, "Head");
@@ -464,8 +464,9 @@ function ChamObject:Update()
 	local highlight = self.highlight;
 	local interface = self.interface;
 	local character = interface.getCharacter(self.player);
+	local health = interface.getHealth(self.player);
 	local options = interface.teamSettings[interface.isFriendly(self.player) and "friendly" or "enemy"];
-	local enabled = options.enabled and character and not
+	local enabled = options.enabled and character and health > 0 and not
 		(#interface.whitelist > 0 and not find(interface.whitelist, self.player.UserId));
 
 	highlight.Enabled = enabled and options.chams;
