@@ -45,118 +45,96 @@ local fontMap = {
     ["Plex"] = 2,
     ["UI"] = 0,
     ["System"] = 1,
-    ["Monospace"] = 3
+    ["Monospace"] = 3,
+    ["Pixel"] = 4,
+    ["Minecraftia"] = 5,
+    ["Verdana"] = 6
 };
 
--- Create necessary directories
-local function createDirectories()
-    if not isfolder("Sense") then
-        makefolder("Sense")
-    end
-    if not isfolder("Sense/assets") then
-        makefolder("Sense/assets")
-    end
-    if not isfolder("Sense/fonts") then
-        makefolder("Sense/fonts")
-    end
+-- Function to create directories if they don't exist
+local function ensureDirectory(dir)
+    local success, result = pcall(function()
+        if not isfolder(dir) then
+            makefolder(dir)
+        end
+    end)
+    return success
 end
 
--- Font registration function
-local function registerFont(name, weight, style, fontData)
-    local assetId = fontData.Id
-    local fontContent = fontData.Font
+-- Function to register a font
+local function registerFont(name, weight, style, url)
+    -- Create directories
+    ensureDirectory("Sense")
+    ensureDirectory("Sense/assets")
+    ensureDirectory("Sense/fonts")
+    
+    local assetName = name .. ".ttf"
+    local fontFileName = name .. ".font"
+    local assetPath = "Sense/assets/" .. assetName
+    local fontPath = "Sense/fonts/" .. fontFileName
     
     -- Download and save font file
-    if isfile("Sense/assets/" .. assetId) then
-        delfile("Sense/assets/" .. assetId)
-    end
+    local fontContent = game:HttpGet(url)
+    writefile(assetPath, fontContent)
     
-    writefile("Sense/assets/" .. assetId, fontContent)
+    -- Create custom asset
+    local customAssetPath = getcustomasset(assetPath)
     
-    local Data = {
+    -- Create font data
+    local fontData = {
         name = name,
         faces = {
             {
                 Name = "Normal",
                 weight = weight or 400,
                 style = style or "Normal",
-                assetId = getcustomasset("Sense/assets/" .. assetId),
-            },
-        },
+                assetId = customAssetPath
+            }
+        }
     }
     
-    writefile("Sense/fonts/" .. name .. ".font", httpService:JSONEncode(Data))
+    -- Save font file
+    writefile(fontPath, httpService:JSONEncode(fontData))
     
-    local customAsset = getcustomasset("Sense/fonts/" .. name .. ".font")
-    
-    -- Create Font object
+    -- Load font
+    local customFontPath = getcustomasset(fontPath)
     local success, font = pcall(function()
-        return Font.fromAssetId(customAsset)
+        return Font.fromAssetId(customFontPath)
     end)
     
     if success and font then
         registeredFonts[name] = font
-        fontMap[name] = #fontMap + 1
         return font
     end
     
     return nil
 end
 
--- Register all custom fonts
-local function registerAllFonts()
-    createDirectories()
-    
-    -- Register Tahoma (as Plex replacement)
-    local TahomaFont = registerFont("Tahoma", 400, "Normal", {
-        Id = "Tahoma.ttf",
-        Font = game:HttpGet("https://github.com/KingVonOBlockJoyce/OctoHook-UI/raw/refs/heads/main/fs-tahoma-8px%20(3).ttf"),
-    })
-    
-    -- Register Pixel font
-    local PixelFont = registerFont("Pixel", 400, "Normal", {
-        Id = "Pixel.ttf",
-        Font = game:HttpGet("https://github.com/KingVonOBlockJoyce/vaderpaste.luau/raw/refs/heads/main/Pixel.ttf"),
-    })
-    
-    -- Register Minecraftia font
-    local MinecraftiaFont = registerFont("Minecraftia", 400, "Normal", {
-        Id = "Minecraftia.ttf",
-        Font = game:HttpGet("https://github.com/i77lhm/storage/raw/refs/heads/main/fonts/Minecraftia-Regular.ttf"),
-    })
-    
-    -- Register Verdana font
-    local VerdanaFont = registerFont("Verdana", 400, "Normal", {
-        Id = "Verdana.ttf",
-        Font = game:HttpGet("https://github.com/i77lhm/storage/raw/refs/heads/main/fonts/Verdana-Font.ttf"),
-    })
-    
-    -- Create Font objects for Drawing library
-    if TahomaFont then
-        Fonts["Plex"] = TahomaFont
-    end
-    if PixelFont then
-        Fonts["Pixel"] = PixelFont
-    end
-    if MinecraftiaFont then
-        Fonts["Minecraftia"] = MinecraftiaFont
-    end
-    if VerdanaFont then
-        Fonts["Verdana"] = VerdanaFont
-    end
-end
-
--- Start font registration in background
+-- Register all fonts in background
 task.spawn(function()
-    local success, err = pcall(registerAllFonts)
-    if not success then
-        warn("[Sense] Font registration failed:", err)
-    end
+    pcall(function()
+        -- Tahoma (as Plex replacement)
+        registerFont("Tahoma", 400, "Normal", "https://github.com/KingVonOBlockJoyce/OctoHook-UI/raw/refs/heads/main/fs-tahoma-8px%20(3).ttf")
+        
+        -- Pixel font
+        registerFont("Pixel", 400, "Normal", "https://github.com/KingVonOBlockJoyce/vaderpaste.luau/raw/refs/heads/main/Pixel.ttf")
+        
+        -- Minecraftia font
+        registerFont("Minecraftia", 400, "Normal", "https://github.com/i77lhm/storage/raw/refs/heads/main/fonts/Minecraftia-Regular.ttf")
+        
+        -- Verdana font
+        registerFont("Verdana", 400, "Normal", "https://github.com/i77lhm/storage/raw/refs/heads/main/fonts/Verdana-Font.ttf")
+    end)
 end)
 
 -- Function to get font enum from font name
 local function getFontEnum(fontName)
     return fontMap[fontName] or 2 -- Default to Plex
+end
+
+-- Function to check if font is available
+local function isFontAvailable(fontName)
+    return fontMap[fontName] ~= nil
 end
 
 -- constants
