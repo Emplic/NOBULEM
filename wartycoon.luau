@@ -40,20 +40,123 @@ local max3 = Vector3.zero.Max;
 
 -- Custom Font System
 local Fonts = {};
-local customFonts = {
-    ["Plex"] = 2, -- Default
+local registeredFonts = {};
+local fontMap = {
+    ["Plex"] = 2,
     ["UI"] = 0,
     ["System"] = 1,
-    ["Monospace"] = 3,
-    ["Pixel"] = 4,
-    ["Minecraftia"] = 5,
-    ["Verdana"] = 6
+    ["Monospace"] = 3
 };
 
--- Function to register custom fonts
-local function registerCustomFonts()
-    -- This would be called from your UI library to register fonts
-    -- For now, we'll assume they're registered
+-- Create necessary directories
+local function createDirectories()
+    if not isfolder("Sense") then
+        makefolder("Sense")
+    end
+    if not isfolder("Sense/assets") then
+        makefolder("Sense/assets")
+    end
+    if not isfolder("Sense/fonts") then
+        makefolder("Sense/fonts")
+    end
+end
+
+-- Font registration function
+local function registerFont(name, weight, style, fontData)
+    local assetId = fontData.Id
+    local fontContent = fontData.Font
+    
+    -- Download and save font file
+    if isfile("Sense/assets/" .. assetId) then
+        delfile("Sense/assets/" .. assetId)
+    end
+    
+    writefile("Sense/assets/" .. assetId, fontContent)
+    
+    local Data = {
+        name = name,
+        faces = {
+            {
+                Name = "Normal",
+                weight = weight or 400,
+                style = style or "Normal",
+                assetId = getcustomasset("Sense/assets/" .. assetId),
+            },
+        },
+    }
+    
+    writefile("Sense/fonts/" .. name .. ".font", httpService:JSONEncode(Data))
+    
+    local customAsset = getcustomasset("Sense/fonts/" .. name .. ".font")
+    
+    -- Create Font object
+    local success, font = pcall(function()
+        return Font.fromAssetId(customAsset)
+    end)
+    
+    if success and font then
+        registeredFonts[name] = font
+        fontMap[name] = #fontMap + 1
+        return font
+    end
+    
+    return nil
+end
+
+-- Register all custom fonts
+local function registerAllFonts()
+    createDirectories()
+    
+    -- Register Tahoma (as Plex replacement)
+    local TahomaFont = registerFont("Tahoma", 400, "Normal", {
+        Id = "Tahoma.ttf",
+        Font = game:HttpGet("https://github.com/KingVonOBlockJoyce/OctoHook-UI/raw/refs/heads/main/fs-tahoma-8px%20(3).ttf"),
+    })
+    
+    -- Register Pixel font
+    local PixelFont = registerFont("Pixel", 400, "Normal", {
+        Id = "Pixel.ttf",
+        Font = game:HttpGet("https://github.com/KingVonOBlockJoyce/vaderpaste.luau/raw/refs/heads/main/Pixel.ttf"),
+    })
+    
+    -- Register Minecraftia font
+    local MinecraftiaFont = registerFont("Minecraftia", 400, "Normal", {
+        Id = "Minecraftia.ttf",
+        Font = game:HttpGet("https://github.com/i77lhm/storage/raw/refs/heads/main/fonts/Minecraftia-Regular.ttf"),
+    })
+    
+    -- Register Verdana font
+    local VerdanaFont = registerFont("Verdana", 400, "Normal", {
+        Id = "Verdana.ttf",
+        Font = game:HttpGet("https://github.com/i77lhm/storage/raw/refs/heads/main/fonts/Verdana-Font.ttf"),
+    })
+    
+    -- Create Font objects for Drawing library
+    if TahomaFont then
+        Fonts["Plex"] = TahomaFont
+    end
+    if PixelFont then
+        Fonts["Pixel"] = PixelFont
+    end
+    if MinecraftiaFont then
+        Fonts["Minecraftia"] = MinecraftiaFont
+    end
+    if VerdanaFont then
+        Fonts["Verdana"] = VerdanaFont
+    end
+end
+
+-- Start font registration in background
+task.spawn(function()
+    local success, err = pcall(registerAllFonts)
+    if not success then
+        warn("[Sense] Font registration failed:", err)
+    end
+end)
+
+-- Function to get font enum from font name
+local function getFontEnum(fontName)
+    return fontMap[fontName] or 2 -- Default to Plex
 end
 
 -- constants
@@ -188,9 +291,9 @@ function EspObject:Construct()
     self.charCache = {};
     self.childCount = 0;
     self.bin = {};
-    self.skeletonLines = {}; -- Cache for skeleton lines
+    self.skeletonLines = {};
     
-    -- Pre-create skeleton lines (max 15 for R15)
+    -- Pre-create skeleton lines
     for i = 1, 16 do 
         self.skeletonLines[i] = self:_create("Line", { Thickness = 1, Visible = false });
     end
@@ -327,11 +430,11 @@ function EspObject:Render()
     
     -- Get font value from shared settings
     local fontValue = interface.sharedSettings.textFont;
-    local fontEnum = customFonts[fontValue] or fontValue;
+    local fontEnum = getFontEnum(fontValue);
 
     -- Apply priority colors if this player is prioritized
     local function getPriorityColor(defaultColor, priorityColor)
-        return self.isPrioritized and priorityColor or defaultColor;
+        return self.isPrioritized and (priorityColor or defaultColor) or defaultColor;
     end
 
     -- SKELETON LOGIC
@@ -354,7 +457,7 @@ function EspObject:Render()
                         line.To = v2;
                         line.Color = getPriorityColor(
                             parseColor(self, options.skeletonColor[1]), 
-                            interface.prioritySkeletonColor[1] or Color3.new(1, 1, 0)
+                            interface.prioritySkeletonColor and interface.prioritySkeletonColor[1]
                         );
                         line.Transparency = options.skeletonColor[2];
                         index = index + 1;
@@ -380,7 +483,7 @@ function EspObject:Render()
         box.Size = corners.bottomRight - corners.topLeft;
         box.Color = getPriorityColor(
             parseColor(self, options.boxColor[1]),
-            interface.priorityBoxColor[1] or Color3.new(1, 1, 0)
+            interface.priorityBoxColor and interface.priorityBoxColor[1]
         );
         box.Transparency = options.boxColor[2];
 
@@ -398,7 +501,7 @@ function EspObject:Render()
         boxFill.Size = corners.bottomRight - corners.topLeft;
         boxFill.Color = getPriorityColor(
             parseColor(self, options.boxFillColor[1]),
-            interface.priorityBoxFillColor[1] or Color3.new(1, 1, 0, 0.3)
+            interface.priorityBoxFillColor and interface.priorityBoxFillColor[1]
         );
         boxFill.Transparency = options.boxFillColor[2];
     end
@@ -437,7 +540,7 @@ function EspObject:Render()
         healthText.Font = fontEnum;
         healthText.Color = getPriorityColor(
             parseColor(self, options.healthTextColor[1]),
-            interface.priorityTextColor[1] or Color3.new(1, 1, 0)
+            interface.priorityTextColor and interface.priorityTextColor[1]
         );
         healthText.Transparency = options.healthTextColor[2];
         healthText.Outline = options.healthTextOutline;
@@ -452,7 +555,7 @@ function EspObject:Render()
         name.Font = fontEnum;
         name.Color = getPriorityColor(
             parseColor(self, options.nameColor[1]),
-            interface.priorityTextColor[1] or Color3.new(1, 1, 0)
+            interface.priorityTextColor and interface.priorityTextColor[1]
         );
         name.Transparency = options.nameColor[2];
         name.Outline = options.nameOutline;
@@ -468,7 +571,7 @@ function EspObject:Render()
         distance.Font = fontEnum;
         distance.Color = getPriorityColor(
             parseColor(self, options.distanceColor[1]),
-            interface.priorityTextColor[1] or Color3.new(1, 1, 0)
+            interface.priorityTextColor and interface.priorityTextColor[1]
         );
         distance.Transparency = options.distanceColor[2];
         distance.Outline = options.distanceOutline;
@@ -484,7 +587,7 @@ function EspObject:Render()
         weapon.Font = fontEnum;
         weapon.Color = getPriorityColor(
             parseColor(self, options.weaponColor[1]),
-            interface.priorityTextColor[1] or Color3.new(1, 1, 0)
+            interface.priorityTextColor and interface.priorityTextColor[1]
         );
         weapon.Transparency = options.weaponColor[2];
         weapon.Outline = options.weaponOutline;
@@ -500,7 +603,7 @@ function EspObject:Render()
         local tracer = visible.tracer;
         tracer.Color = getPriorityColor(
             parseColor(self, options.tracerColor[1]),
-            interface.priorityTracerColor[1] or Color3.new(1, 1, 0)
+            interface.priorityTracerColor and interface.priorityTracerColor[1]
         );
         tracer.Transparency = options.tracerColor[2];
         tracer.To = (corners.bottomLeft + corners.bottomRight)*0.5;
@@ -525,7 +628,7 @@ function EspObject:Render()
         arrow.PointC = arrow.PointA - rotateVector(self.direction, -0.45)*options.offScreenArrowSize;
         arrow.Color = getPriorityColor(
             parseColor(self, options.offScreenArrowColor[1]),
-            interface.priorityArrowColor[1] or Color3.new(1, 1, 0)
+            interface.priorityArrowColor and interface.priorityArrowColor[1]
         );
         arrow.Transparency = options.offScreenArrowColor[2];
 
@@ -545,7 +648,7 @@ function EspObject:Render()
             line.Visible = box3dEnabled;
             line.Color = getPriorityColor(
                 parseColor(self, options.box3dColor[1]),
-                interface.priorityBox3dColor[1] or Color3.new(1, 1, 0)
+                interface.priorityBox3dColor and interface.priorityBox3dColor[1]
             );
             line.Transparency = options.box3dColor[2];
         end
@@ -616,12 +719,12 @@ function ChamObject:Update()
     if highlight.Enabled then
         highlight.Adornee = character;
         
-        if isPrioritized then
+        if isPrioritized and interface.priorityChamsFillColor then
             -- Use priority colors for prioritized players
-            highlight.FillColor = interface.priorityChamsFillColor[1] or Color3.fromRGB(255, 255, 0);
-            highlight.FillTransparency = interface.priorityChamsFillColor[2] or 0.5;
-            highlight.OutlineColor = interface.priorityChamsOutlineColor[1] or Color3.fromRGB(255, 215, 0);
-            highlight.OutlineTransparency = interface.priorityChamsOutlineColor[2] or 0;
+            highlight.FillColor = interface.priorityChamsFillColor[1];
+            highlight.FillTransparency = interface.priorityChamsFillColor[2];
+            highlight.OutlineColor = interface.priorityChamsOutlineColor and interface.priorityChamsOutlineColor[1] or Color3.fromRGB(255, 215, 0);
+            highlight.OutlineTransparency = interface.priorityChamsOutlineColor and interface.priorityChamsOutlineColor[2] or 0;
         else
             highlight.FillColor = parseColor(self, options.chamsFillColor[1]);
             highlight.FillTransparency = options.chamsFillColor[2];
@@ -633,199 +736,13 @@ function ChamObject:Update()
     end
 end
 
--- instance class
-local InstanceObject = {};
-InstanceObject.__index = InstanceObject;
-
-function InstanceObject.new(instance, options, interface)
-    local self = setmetatable({}, InstanceObject);
-    self.instance = assert(instance, "Missing argument #1 (Instance Expected)");
-    self.options = assert(options, "Missing argument #2 (table expected)");
-    self.interface = interface or { sharedSettings = { textSize = 13, textFont = 2, limitDistance = false, maxDistance = 150 } };
-    self:Construct();
-    return self;
-end
-
-function InstanceObject:_create(class, properties)
-    local drawing = Drawing.new(class);
-    for property, value in next, properties do
-        pcall(function() drawing[property] = value; end);
-    end
-    self.bin[#self.bin + 1] = drawing;
-    return drawing;
-end
-
-function InstanceObject:Construct()
-    self.bin = {};
-    local options = self.options;
-    
-    -- defaults
-    options.enabled = options.enabled == nil and true or options.enabled;
-    options.text = options.text or "{name}";
-    options.textColor = options.textColor or { Color3.new(1,1,1), 1 };
-    options.textOutline = options.textOutline == nil and true or options.textOutline;
-    options.textOutlineColor = options.textOutlineColor or Color3.new();
-    options.box = options.box or false;
-    options.boxColor = options.boxColor or { Color3.new(1,1,1), 1 };
-    options.tracer = options.tracer or false;
-    options.tracerColor = options.tracerColor or { Color3.new(1,1,1), 1 };
-    options.tracerOrigin = options.tracerOrigin or "Bottom";
-    options.offScreenArrow = options.offScreenArrow or false;
-    options.offScreenArrowColor = options.offScreenArrowColor or { Color3.new(1,1,1), 1 };
-    options.offScreenArrowSize = options.offScreenArrowSize or 15;
-    options.offScreenArrowRadius = options.offScreenArrowRadius or 150;
-    
-    self.drawings = {
-        name = self:_create("Text", { Center = true, Visible = false }),
-        distance = self:_create("Text", { Center = true, Visible = false }),
-        box = self:_create("Square", { Thickness = 1, Visible = false }),
-        boxOutline = self:_create("Square", { Thickness = 3, Visible = false }),
-        tracer = self:_create("Line", { Thickness = 1, Visible = false }),
-        tracerOutline = self:_create("Line", { Thickness = 3, Visible = false }),
-        arrow = self:_create("Triangle", { Filled = true, Visible = false }),
-        arrowOutline = self:_create("Triangle", { Thickness = 3, Visible = false })
-    };
-
-    self.renderConnection = runService.Heartbeat:Connect(function(deltaTime)
-        self:Render(deltaTime);
-    end);
-end
-
-function InstanceObject:Destruct()
-    self.renderConnection:Disconnect();
-    for i = 1, #self.bin do
-        self.bin[i]:Remove();
-    end
-    clear(self);
-end
-
-function InstanceObject:Render()
-    local instance = self.instance;
-    if not instance or not instance.Parent then
-        return self:Destruct();
-    end
-
-    local options = self.options;
-    if not options.enabled then
-        for _, d in pairs(self.drawings) do d.Visible = false; end
-        return;
-    end
-
-    -- Get Position and Bounds
-    local cframe, size = getInstanceBounds(instance);
-    local worldPos = cframe and cframe.Position or getPivot(instance).Position;
-    local position, visible, depth = worldToScreen(worldPos);
-
-    if self.interface.sharedSettings.limitDistance and depth > self.interface.sharedSettings.maxDistance then
-        visible = false;
-    end
-    
-    -- Calculate Direction if offscreen
-    local direction = nil;
-    if not visible and options.offScreenArrow then
-        local camCFrame = camera.CFrame;
-        local flat = fromMatrix(camCFrame.Position, camCFrame.RightVector, Vector3.yAxis);
-        local objectSpace = pointToObjectSpace(flat, worldPos);
-        direction = Vector2.new(objectSpace.X, objectSpace.Z).Unit;
-    end
-    
-    -- Calculate corners if box is enabled and we have size
-    local corners = nil;
-    if visible and options.box and size then
-        corners = calculateCorners(cframe, size);
-    end
-
-    -- Draw Name
-    local txt = self.drawings.name;
-    txt.Visible = visible;
-    if visible then
-        txt.Position = position; 
-        if corners then
-            txt.Position = (corners.topLeft + corners.topRight)*0.5 - Vector2.yAxis*txt.TextBounds.Y - NAME_OFFSET;
-        end
-        txt.Color = options.textColor[1];
-        txt.Transparency = options.textColor[2];
-        txt.Outline = options.textOutline;
-        txt.OutlineColor = options.textOutlineColor;
-        txt.Size = self.interface.sharedSettings.textSize;
-        
-        -- Handle custom fonts
-        local fontValue = self.interface.sharedSettings.textFont;
-        local fontEnum = customFonts[fontValue] or fontValue;
-        txt.Font = fontEnum;
-        
-        txt.Text = options.text:gsub("{name}", instance.Name):gsub("{distance}", round(depth)):gsub("{position}", tostring(worldPos));
-    end
-    
-    -- Draw Box
-    local box = self.drawings.box;
-    local boxOut = self.drawings.boxOutline;
-    local showBox = visible and options.box and corners ~= nil;
-    box.Visible = showBox;
-    boxOut.Visible = showBox;
-    
-    if showBox then
-        box.Position = corners.topLeft;
-        box.Size = corners.bottomRight - corners.topLeft;
-        box.Color = options.boxColor[1];
-        box.Transparency = options.boxColor[2];
-        
-        boxOut.Position = box.Position;
-        boxOut.Size = box.Size;
-        boxOut.Color = Color3.new(0,0,0);
-        boxOut.Transparency = 1;
-    end
-
-    -- Draw Tracer
-    local trace = self.drawings.tracer;
-    local traceOut = self.drawings.tracerOutline;
-    trace.Visible = visible and options.tracer;
-    traceOut.Visible = trace.Visible;
-    
-    if trace.Visible then
-        trace.Color = options.tracerColor[1];
-        trace.Transparency = options.tracerColor[2];
-        trace.To = corners and (corners.bottomLeft + corners.bottomRight)*0.5 or position;
-        trace.From = 
-            options.tracerOrigin == "Middle" and viewportSize*0.5 or
-            options.tracerOrigin == "Top" and viewportSize*Vector2.new(0.5, 0) or
-            options.tracerOrigin == "Bottom" and viewportSize*Vector2.new(0.5, 1);
-            
-        traceOut.Color = Color3.new(0,0,0);
-        traceOut.Transparency = 1;
-        traceOut.To = trace.To;
-        traceOut.From = trace.From;
-    end
-
-    -- Draw Arrow (OOF)
-    local arrow = self.drawings.arrow;
-    local arrowOut = self.drawings.arrowOutline;
-    local showArrow = (not visible) and options.offScreenArrow and direction ~= nil;
-    arrow.Visible = showArrow;
-    arrowOut.Visible = showArrow;
-    
-    if showArrow then
-        arrow.PointA = min2(max2(viewportSize*0.5 + direction*options.offScreenArrowRadius, Vector2.one*25), viewportSize - Vector2.one*25);
-        arrow.PointB = arrow.PointA - rotateVector(direction, 0.45)*options.offScreenArrowSize;
-        arrow.PointC = arrow.PointA - rotateVector(direction, -0.45)*options.offScreenArrowSize;
-        arrow.Color = options.offScreenArrowColor[1];
-        arrow.Transparency = options.offScreenArrowColor[2];
-
-        arrowOut.PointA = arrow.PointA;
-        arrowOut.PointB = arrow.PointB;
-        arrowOut.PointC = arrow.PointC;
-        arrowOut.Color = Color3.new(0,0,0);
-        arrowOut.Transparency = 1;
-    end
-end
-
 -- interface
 local EspInterface = {
     _hasLoaded = false,
     _objectCache = {},
     whitelist = {},
     prioritizedPlayer = nil,
-    -- Priority colors (default yellow/gold theme)
+    -- Priority colors
     priorityTextColor = { Color3.new(1, 1, 0), 1 },
     priorityBoxColor = { Color3.new(1, 1, 0), 1 },
     priorityBoxFillColor = { Color3.new(1, 1, 0, 0.3), 0.5 },
@@ -839,7 +756,7 @@ local EspInterface = {
     
     sharedSettings = {
         textSize = 13,
-        textFont = "Plex", -- Now uses string for font names
+        textFont = "Plex",
         limitDistance = false,
         maxDistance = 150,
         useTeamColor = false
@@ -951,7 +868,7 @@ function EspInterface.AddInstance(instance, options)
     if cache[instance] then
         warn("Instance handler already exists.");
     else
-        cache[instance] = { InstanceObject.new(instance, options, EspInterface) };
+        cache[instance] = { Instance.new(instance, options, EspInterface) };
     end
     return cache[instance][1];
 end
@@ -967,7 +884,7 @@ end
 function EspInterface.AddToWhitelist(userId)
     for _, id in ipairs(EspInterface.whitelist) do
         if id == userId then
-            return false; -- Already in whitelist
+            return false;
         end
     end
     table.insert(EspInterface.whitelist, userId);
@@ -1005,11 +922,18 @@ function EspInterface.Load()
     end
 
     local plrs = players:GetPlayers();
-    for i = 2, #plrs do
-        createObject(plrs[i]);
+    for i = 1, #plrs do
+        if plrs[i] ~= localPlayer then
+            createObject(plrs[i]);
+        end
     end
 
-    EspInterface.playerAdded = players.PlayerAdded:Connect(createObject);
+    EspInterface.playerAdded = players.PlayerAdded:Connect(function(player)
+        if player ~= localPlayer then
+            createObject(player);
+        end
+    end);
+    
     EspInterface.playerRemoving = players.PlayerRemoving:Connect(removeObject);
     EspInterface._hasLoaded = true;
 end
