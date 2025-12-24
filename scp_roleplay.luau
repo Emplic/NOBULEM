@@ -57,48 +57,9 @@ local VERTICES = {
 	Vector3.new(1, -1, 1)
 };
 
--- Skeleton Constants
-local R15_JOINTS = {
-	{"Head", "UpperTorso"},
-	{"UpperTorso", "LowerTorso"},
-	{"LowerTorso", "LeftUpperLeg"}, {"LeftUpperLeg", "LeftLowerLeg"}, {"LeftLowerLeg", "LeftFoot"},
-	{"LowerTorso", "RightUpperLeg"}, {"RightUpperLeg", "RightLowerLeg"}, {"RightLowerLeg", "RightFoot"},
-	{"UpperTorso", "LeftUpperArm"}, {"LeftUpperArm", "LeftLowerArm"}, {"LeftLowerArm", "LeftHand"},
-	{"UpperTorso", "RightUpperArm"}, {"RightUpperArm", "RightLowerArm"}, {"RightLowerArm", "RightHand"}
-}
-
-local R6_JOINTS = {
-	{"Head", "Torso"},
-	{"Torso", "Left Arm"}, {"Torso", "Right Arm"},
-	{"Torso", "Left Leg"}, {"Torso", "Right Leg"}
-}
-
 -- functions
 local function isBodyPart(name)
 	return name == "Head" or name:find("Torso") or name:find("Leg") or name:find("Arm");
-end
-
--- [FIX] Robust way to find a BodyPart that is actually a BasePart (ignores Accessories)
-local function getBodyPart(character, name)
-	if not character then return nil end
-	local part = character:FindFirstChild(name)
-	
-	-- Fast path: if found and is BasePart, return it
-	if part and part:IsA("BasePart") then
-		return part
-	end
-	
-	-- Slow path: Handle name collisions (e.g. Accessory named "LowerTorso")
-	-- We iterate to find the actual BasePart
-	if part then
-		for _, child in ipairs(character:GetChildren()) do
-			if child.Name == name and child:IsA("BasePart") then
-				return child
-			end
-		end
-	end
-	
-	return nil
 end
 
 local function getBoundingBox(parts)
@@ -169,13 +130,6 @@ function EspObject:Construct()
 	self.charCache = {};
 	self.childCount = 0;
 	self.bin = {};
-	
-	-- Pre-create skeleton lines (Max 16 for safety)
-	local skeletonLines = {}
-	for i = 1, 16 do
-		skeletonLines[i] = self:create("Line", { Thickness = 1, Visible = false })
-	end
-
 	self.drawings = {
 		box3d = {
 			{
@@ -199,7 +153,6 @@ function EspObject:Construct()
 				self:create("Line", { Thickness = 1, Visible = false })
 			}
 		},
-		skeleton = skeletonLines,
 		visible = {
 			tracerOutline = self:create("Line", { Thickness = 3, Visible = false }),
 			tracer = self:create("Line", { Thickness = 1, Visible = false }),
@@ -212,9 +165,8 @@ function EspObject:Construct()
 			name = self:create("Text", { Text = self.player.Name, Center = true, Visible = false }),
 			distance = self:create("Text", { Center = true, Visible = false }),
 			weapon = self:create("Text", { Center = true, Visible = false }),
+            -- Added Team Name text
 			teamName = self:create("Text", { Center = true, Visible = false }),
-			headDot = self:create("Circle", { NumSides = 12, Filled = true, Visible = false, Radius = 4 }),
-			headDotOutline = self:create("Circle", { NumSides = 12, Filled = false, Visible = false, Radius = 4, Thickness = 2 })
 		},
 		hidden = {
 			arrowOutline = self:create("Triangle", { Thickness = 3, Visible = false }),
@@ -242,20 +194,21 @@ end
 
 function EspObject:Destruct()
 	if self.drawings then
-		local function cleanTable(tbl)
-			for _, v in pairs(tbl) do
-				if type(v) == "table" and v.Visible == nil then
-					cleanTable(v)
-				elseif type(v) == "table" and v.Visible ~= nil then
-					v.Visible = false
-				elseif typeof(v) == "Instance" then
-					-- ignore
-				elseif v and v.Visible ~= nil then
-					v.Visible = false
+		for _, drawings in pairs(self.drawings) do
+			if type(drawings) == "table" then
+				for _, drawing in pairs(drawings) do
+					if type(drawing) == "table" then
+						for _, line in pairs(drawing) do
+							if line.Visible ~= nil then
+								line.Visible = false;
+							end
+						end
+					elseif drawing.Visible ~= nil then
+						drawing.Visible = false;
+					end
 				end
 			end
 		end
-		cleanTable(self.drawings)
 	end
 	
 	self.maid:Cleanup();
@@ -272,18 +225,14 @@ function EspObject:Update()
 	self.enabled = self.options.enabled and self.character and not
 		(#interface.whitelist > 0 and not find(interface.whitelist, self.player.UserId));
 
-	-- [FIX] Use getBodyPart instead of FindFirstChild to avoid Accessories
-	local head = self.enabled and getBodyPart(self.character, "Head");
+	local head = self.enabled and findFirstChild(self.character, "Head");
 	if not head then
 		return;
 	end
 
-	self.headPosition = head.Position;
-	
-	local headScreen, onScreen, depth = worldToScreen(head.Position);
+	local _, onScreen, depth = worldToScreen(head.Position);
 	self.onScreen = onScreen;
 	self.distance = depth;
-	self.headScreenPosition = Vector2.new(headScreen.X, headScreen.Y)
 
 	if interface.sharedSettings.limitDistance and depth > interface.sharedSettings.maxDistance then
 		self.onScreen = false;
@@ -322,19 +271,15 @@ function EspObject:Render()
 	local visible = self.drawings.visible;
 	local hidden = self.drawings.hidden;
 	local box3d = self.drawings.box3d;
-	local skeleton = self.drawings.skeleton;
 	local interface = self.interface;
 	local options = self.options;
 	local corners = self.corners;
 
-    -- [FIX] Safety check: If corners are missing, force onScreen to false
-	if onScreen and not corners then
-		onScreen = false;
-	end
-
+    -- Logic to resolve colors based on shared settings
     local useTeamColor = interface.sharedSettings.useTeamColor;
     local teamColor = self.player.TeamColor.Color or Color3.new(1,1,1);
     
+    -- Helper to select color
     local function resolveColor(optionColor)
         if useTeamColor then return teamColor end
         return optionColor[1]
@@ -363,63 +308,6 @@ function EspObject:Render()
 		boxFill.Size = corners.bottomRight - corners.topLeft;
 		boxFill.Color = resolveColor(options.boxFillColor);
 		boxFill.Transparency = options.boxFillColor[2];
-	end
-
-	-- Head Dot Rendering
-	visible.headDot.Visible = enabled and onScreen and options.headDot;
-	visible.headDotOutline.Visible = visible.headDot.Visible and options.headDotOutline;
-	if visible.headDot.Visible then
-		local dot = visible.headDot;
-		dot.Position = self.headScreenPosition;
-		dot.Radius = options.headDotRadius or 4;
-		dot.Color = resolveColor(options.headDotColor);
-		dot.Transparency = options.headDotColor[2];
-
-		local dotOutline = visible.headDotOutline;
-		dotOutline.Position = dot.Position;
-		dotOutline.Radius = dot.Radius;
-		dotOutline.Color = Color3.new(0,0,0);
-		dotOutline.Transparency = 1;
-	end
-
-	-- Skeleton Rendering
-	local skeletonEnabled = enabled and onScreen and options.skeleton;
-	if skeletonEnabled and self.character then
-		-- [FIX] Use getBodyPart for rig type detection to avoid "UpperTorso" Accessory
-		local joints = getBodyPart(self.character, "UpperTorso") and R15_JOINTS or R6_JOINTS;
-		local idx = 1
-		
-		for _, joint in ipairs(joints) do
-			-- [FIX] Use getBodyPart to ensure we get a BasePart, not an Accessory
-			local p1 = getBodyPart(self.character, joint[1])
-			local p2 = getBodyPart(self.character, joint[2])
-			
-			if p1 and p2 then
-				local s1, v1 = wtvp(camera, p1.Position)
-				local s2, v2 = wtvp(camera, p2.Position)
-				
-				if v1 and v2 then
-					local line = skeleton[idx]
-					if line then
-						line.Visible = true
-						line.From = Vector2.new(s1.X, s1.Y)
-						line.To = Vector2.new(s2.X, s2.Y)
-						line.Color = resolveColor(options.skeletonColor)
-						line.Transparency = options.skeletonColor[2]
-						line.Thickness = 1
-						idx = idx + 1
-					end
-				end
-			end
-		end
-		
-		for i = idx, #skeleton do
-			skeleton[i].Visible = false
-		end
-	else
-		for i = 1, #skeleton do
-			skeleton[i].Visible = false
-		end
 	end
 
 	visible.healthBar.Visible = enabled and onScreen and options.healthBar;
@@ -472,10 +360,8 @@ function EspObject:Render()
 		name.Position = (corners.topLeft + corners.topRight)*0.5 - Vector2.yAxis*name.TextBounds.Y - NAME_OFFSET;
 	end
 
-    local bottomCenter = Vector2.zero
-	if onScreen then
-		bottomCenter = (corners.bottomLeft + corners.bottomRight)*0.5
-	end
+    -- Bottom Text Stack Logic (Distance -> Weapon -> Team Name)
+    local bottomCenter = (corners.bottomLeft + corners.bottomRight)*0.5
     local currentYOffset = 0
 
 	visible.distance.Visible = enabled and onScreen and self.distance and options.distance;
@@ -490,6 +376,8 @@ function EspObject:Render()
 		distance.OutlineColor = options.distanceOutlineColor;
         
 		distance.Position = bottomCenter + DISTANCE_OFFSET;
+        
+        -- Update offset for next element
         currentYOffset = currentYOffset + distance.TextBounds.Y + DISTANCE_OFFSET.Y
 	end
 
@@ -510,6 +398,7 @@ function EspObject:Render()
         end
         
 		weapon.Position = bottomCenter + DISTANCE_OFFSET + posOffset
+        
         currentYOffset = currentYOffset + weapon.TextBounds.Y
 	end
     
@@ -519,6 +408,7 @@ function EspObject:Render()
         tName.Text = self.player.Team and self.player.Team.Name or "No Team";
         tName.Size = interface.sharedSettings.textSize;
         tName.Font = interface.sharedSettings.textFont;
+        -- Use resolveColor to respect shared settings, or fallback to specific setting
         tName.Color = resolveColor(options.teamNameColor); 
         tName.Transparency = options.teamNameColor[2];
         tName.Outline = options.teamNameOutline;
@@ -693,6 +583,7 @@ function InstanceEspObject:Construct()
 		}
 	};
 	
+	-- Create 3D box if enabled
 	if self.customOptions.box3d then
 		for i = 1, 4 do
 			self.drawings.box3d[i] = {
@@ -723,14 +614,21 @@ end
 
 function InstanceEspObject:Destruct()
 	if self.drawings then
-		local function clean(t)
-			for k,v in pairs(t) do
-				if type(v)=="table" and v.Visible==nil then clean(v)
-				elseif type(v)=="table" and v.Visible~=nil then v.Visible=false
-				elseif v and v.Visible~=nil then v.Visible=false end
+		for _, drawings in pairs(self.drawings) do
+			if type(drawings) == "table" then
+				for _, drawing in pairs(drawings) do
+					if type(drawing) == "table" then
+						for _, line in pairs(drawing) do
+							if line.Visible ~= nil then
+								line.Visible = false;
+							end
+						end
+					elseif drawing.Visible ~= nil then
+						drawing.Visible = false;
+					end
+				end
 			end
 		end
-		clean(self.drawings)
 	end
 	
 	if self.interface and self.interface._instanceCache then
@@ -752,6 +650,7 @@ function InstanceEspObject:Update()
 	local interface = self.interface;
 	local options = interface.instanceSettings or interface.teamSettings.enemy;
 	
+	-- Override with custom options
 	for key, value in pairs(self.customOptions) do
 		options[key] = value;
 	end
@@ -827,16 +726,19 @@ function InstanceEspObject:Render()
 	local options = self.options;
 	local corners = self.corners;
 	
+	-- Early exit if not valid
 	if not corners then
-		local function hideAll(t)
-			for k,v in pairs(t) do
-				if type(v)=="table" and v.Visible==nil then hideAll(v)
-				elseif type(v)=="table" and v.Visible~=nil then v.Visible=false
-				elseif v and v.Visible~=nil then v.Visible=false end
+		for _, drawing in pairs(visible) do
+			drawing.Visible = false;
+		end
+		for _, drawing in pairs(hidden) do
+			drawing.Visible = false;
+		end
+		for _, face in pairs(box3d) do
+			for _, line in pairs(face) do
+				line.Visible = false;
 			end
 		end
-		hideAll(visible)
-		hideAll(hidden)
 		return;
 	end
 	
@@ -1118,7 +1020,7 @@ local EspInterface = {
 		textFont = 2,
 		limitDistance = false,
 		maxDistance = 150,
-        useTeamColor = false,
+        useTeamColor = false, -- ADDED: Toggle to use team color for all ESP elements
 	},
 	teamSettings = {
 		enemy = {
@@ -1129,12 +1031,6 @@ local EspInterface = {
 			boxOutlineColor = { Color3.new(), 1 },
 			boxFill = false,
 			boxFillColor = { Color3.new(1,0,0), 0.5 },
-			skeleton = false,
-			skeletonColor = { Color3.new(1,1,1), 1 },
-			headDot = false,
-			headDotColor = { Color3.new(1,0,0), 1 },
-			headDotRadius = 4,
-			headDotOutline = true,
 			healthBar = false,
 			healthyColor = Color3.new(0,1,0),
 			dyingColor = Color3.new(1,0,0),
@@ -1154,6 +1050,7 @@ local EspInterface = {
 			weaponColor = { Color3.new(1,1,1), 1 },
 			weaponOutline = true,
 			weaponOutlineColor = Color3.new(),
+            -- ADDED: Team Name Text Settings
             teamName = false,
             teamNameColor = { Color3.new(1,1,1), 1 },
             teamNameOutline = true,
@@ -1186,12 +1083,6 @@ local EspInterface = {
 			boxOutlineColor = { Color3.new(), 1 },
 			boxFill = false,
 			boxFillColor = { Color3.new(0,1,0), 0.5 },
-			skeleton = false,
-			skeletonColor = { Color3.new(1,1,1), 1 },
-			headDot = false,
-			headDotColor = { Color3.new(0,1,0), 1 },
-			headDotRadius = 4,
-			headDotOutline = true,
 			healthBar = false,
 			healthyColor = Color3.new(0,1,0),
 			dyingColor = Color3.new(1,0,0),
@@ -1211,6 +1102,7 @@ local EspInterface = {
 			weaponColor = { Color3.new(1,1,1), 1 },
 			weaponOutline = true,
 			weaponOutlineColor = Color3.new(),
+            -- ADDED: Team Name Text Settings
             teamName = false,
             teamNameColor = { Color3.new(1,1,1), 1 },
             teamNameOutline = true,
@@ -1236,6 +1128,7 @@ local EspInterface = {
 			chamsOutlineColor = { Color3.new(0,1,0), 0 }
 		}
 	},
+	-- Settings for instances (NPCs, etc.)
 	instanceSettings = {
 		enabled = false,
 		box = false,
@@ -1294,6 +1187,7 @@ function EspInterface.AddInstanceEsp(instance, customOptions)
 	
 	local cache = EspInterface._instanceCache;
 	if cache[instance] then
+		--warn("Instance ESP handler already exists for " .. instance.Name);
 		return cache[instance];
 	end
 	
@@ -1310,6 +1204,7 @@ function EspInterface.AddInstance(instance, options)
 	
 	local cache = EspInterface._instanceCache;
 	if cache[instance] then
+		--warn("Instance handler already exists for " .. instance.Name);
 		return cache[instance];
 	end
 	
@@ -1317,6 +1212,7 @@ function EspInterface.AddInstance(instance, options)
 	return cache[instance];
 end
 
+-- Remove instance ESP
 function EspInterface.RemoveInstance(instance)
 	local cache = EspInterface._instanceCache;
 	local object = cache[instance];
@@ -1328,6 +1224,7 @@ function EspInterface.RemoveInstance(instance)
 	return false;
 end
 
+-- Clean up invalid instances
 function EspInterface.CleanupInstances()
 	local cache = EspInterface._instanceCache;
 	local toRemove = {};
@@ -1346,6 +1243,7 @@ function EspInterface.CleanupInstances()
 	return #toRemove;
 end
 
+-- Add multiple instances with same options
 function EspInterface.AddInstances(instances, customOptions)
 	local objects = {};
 	for i, instance in pairs(instances) do
@@ -1357,6 +1255,7 @@ function EspInterface.AddInstances(instances, customOptions)
 	return objects;
 end
 
+-- Add all instances of a class
 function EspInterface.AddInstancesByClass(className, customOptions)
 	local instances = {};
 	for i, v in pairs(workspace:GetDescendants()) do
@@ -1399,7 +1298,9 @@ function EspInterface.Load()
 	EspInterface.maid:AddTask(EspInterface.playerAdded);
 	EspInterface.maid:AddTask(EspInterface.playerRemoving);
 	
+	-- Add periodic cleanup for instances
 	EspInterface.cleanupConnection = runService.Heartbeat:Connect(function()
+		-- Run cleanup every 10 seconds
 		if tick() % 10 < 0.1 then
 			EspInterface.CleanupInstances();
 		end
@@ -1412,6 +1313,7 @@ end
 function EspInterface.Unload()
 	assert(EspInterface._hasLoaded, "Esp has not been loaded yet.");
 
+	-- Clean up all player objects
 	for player, object in next, EspInterface._objectCache do
 		if object then
 			for i = 1, #object do
@@ -1421,6 +1323,7 @@ function EspInterface.Unload()
 	end
 	clear(EspInterface._objectCache);
 	
+	-- Clean up all instance objects
 	for instance, object in next, EspInterface._instanceCache do
 		if object then
 			object:Destruct();
@@ -1436,6 +1339,7 @@ function EspInterface.getWeapon(player)
 	local character = player.Character;
 	if not character then return "None"; end
 	
+	-- Check for held tools
 	local tool = character:FindFirstChildOfClass("Tool");
 	if tool then
 		return tool.Name;
@@ -1460,30 +1364,25 @@ function EspInterface.getHealth(character)
 	return 100, 100;
 end
 
+-- Utility functions for easier configuration
 function EspInterface.EnableEnemyEsp()
-	local s = EspInterface.teamSettings.enemy
-	s.enabled = true
-	s.box = true
-	s.skeleton = true
-	s.headDot = true
-	s.name = true
-	s.distance = true
-	s.healthBar = true
-	s.weapon = true
-    s.teamName = true
+	EspInterface.teamSettings.enemy.enabled = true;
+	EspInterface.teamSettings.enemy.box = true;
+	EspInterface.teamSettings.enemy.name = true;
+	EspInterface.teamSettings.enemy.distance = true;
+	EspInterface.teamSettings.enemy.healthBar = true;
+	EspInterface.teamSettings.enemy.weapon = true;
+    EspInterface.teamSettings.enemy.teamName = true;
 end
 
 function EspInterface.EnableFriendlyEsp()
-	local s = EspInterface.teamSettings.friendly
-	s.enabled = true
-	s.box = true
-	s.skeleton = true
-	s.headDot = true
-	s.name = true
-	s.distance = true
-	s.healthBar = true
-	s.weapon = true
-    s.teamName = true
+	EspInterface.teamSettings.friendly.enabled = true;
+	EspInterface.teamSettings.friendly.box = true;
+	EspInterface.teamSettings.friendly.name = true;
+	EspInterface.teamSettings.friendly.distance = true;
+	EspInterface.teamSettings.friendly.healthBar = true;
+	EspInterface.teamSettings.friendly.weapon = true;
+    EspInterface.teamSettings.friendly.teamName = true;
 end
 
 function EspInterface.EnableInstanceEsp()
