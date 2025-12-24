@@ -1020,7 +1020,7 @@ local EspInterface = {
 		textFont = 2,
 		limitDistance = false,
 		maxDistance = 150,
-        useTeamColor = false, -- ADDED: Toggle to use team color for all ESP elements
+        useTeamColor = true, -- ADDED: Toggle to use team color for all ESP elements
 	},
 	teamSettings = {
 		enemy = {
@@ -1051,7 +1051,7 @@ local EspInterface = {
 			weaponOutline = true,
 			weaponOutlineColor = Color3.new(),
             -- ADDED: Team Name Text Settings
-            teamName = false,
+            teamName = true,
             teamNameColor = { Color3.new(1,1,1), 1 },
             teamNameOutline = true,
             teamNameOutlineColor = Color3.new(),
