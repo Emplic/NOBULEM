@@ -6271,12 +6271,12 @@ function Library:CreateWindow(WindowInfo)
         })
         Library:AddOutline(MainFrame)
 
-        -- [CHRISTMAS ADDON] Santa Hat
         local SantaHat = Instance.new("ImageLabel")
         SantaHat.BackgroundTransparency = 1
-        SantaHat.Position = UDim2.new(0, -28, 0, -25)
-        SantaHat.Size = UDim2.new(0, 70, 0, 70)
+        SantaHat.Position = UDim2.new(0, -12, 0, -15) 
+        SantaHat.Size = UDim2.new(0, 60, 0, 60)
         SantaHat.Image = "rbxassetid://15407501497"
+        SantaHat.Rotation = -15
         SantaHat.ZIndex = 105
         SantaHat.Parent = MainFrame
 
