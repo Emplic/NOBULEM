@@ -253,7 +253,7 @@ function SaveManager:Save(name)
         return true
     end
 
-    function SaveManager:Load(name)
+   function SaveManager:Load(name)
         if (not name) then
             return false, "no config file is selected"
         end
@@ -270,22 +270,21 @@ function SaveManager:Save(name)
         if not success then return false, "decode error" end
 
         if decoded.settings then
-            -- [FIXED] Proper Keybind Loading
+            -- [UPDATED] Keybind Loading with UI Refresh
             if decoded.settings.ToggleKeybind then
                 local keyName = decoded.settings.ToggleKeybind
                 
-                -- Support legacy "Enum.KeyCode.X" saving
                 if type(keyName) == "string" then
                     keyName = keyName:gsub("Enum.KeyCode.", "")
                     
-                    -- Check if it's a valid KeyCode to avoid errors
                     if Enum.KeyCode[keyName] then
                         local currentBind = self.Library.ToggleKeybind
-                        if typeof(currentBind) == "table" then
-                            -- If it's a KeyPicker table, update the value
-                            currentBind.Value = keyName 
+                        
+                        -- If the bind is a KeyPicker (Table), use SetValue to update the UI text
+                        if typeof(currentBind) == "table" and currentBind.SetValue then
+                            currentBind:SetValue({ keyName, currentBind.Mode, currentBind.Modifiers })
                         else
-                            -- If it's a raw Enum/nil, update the Enum
+                            -- Otherwise just set the Enum
                             self.Library.ToggleKeybind = Enum.KeyCode[keyName]
                         end
                     end
