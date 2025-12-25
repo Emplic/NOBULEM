@@ -192,8 +192,7 @@ local SaveManager = {} do
         self.SubFolder = folder
         self:BuildFolderTree()
     end
-
-   function SaveManager:Save(name)
+function SaveManager:Save(name)
         if (not name) then
             return false, "no config file is selected"
         end
@@ -206,13 +205,19 @@ local SaveManager = {} do
 
         local data = {
             objects = {},
-            settings = {} -- Store Global Settings here
+            settings = {}
         }
 
-        -- [NEW] Save Menu Keybind & UI Positions
         if self.Library then
-            -- Save Menu Keybind (Convert Enum to String)
-            data.settings.ToggleKeybind = tostring(self.Library.ToggleKeybind)
+            -- [FIXED] Proper Keybind Saving
+            local toggleKey = self.Library.ToggleKeybind
+            if typeof(toggleKey) == "EnumItem" then
+                data.settings.ToggleKeybind = toggleKey.Name
+            elseif typeof(toggleKey) == "table" and toggleKey.Value then
+                data.settings.ToggleKeybind = toggleKey.Value
+            elseif typeof(toggleKey) == "string" then
+                data.settings.ToggleKeybind = toggleKey
+            end
 
             -- Save Keybind List Position
             if self.Library.KeybindFrame then
@@ -264,13 +269,26 @@ local SaveManager = {} do
         local success, decoded = pcall(HttpService.JSONDecode, HttpService, readfile(file))
         if not success then return false, "decode error" end
 
-        -- [NEW] Load Menu Keybind & UI Positions
         if decoded.settings then
-            -- Load Toggle Keybind
+            -- [FIXED] Proper Keybind Loading
             if decoded.settings.ToggleKeybind then
-                local keyName = decoded.settings.ToggleKeybind:gsub("Enum.KeyCode.", "")
-                if Enum.KeyCode[keyName] then
-                    self.Library.ToggleKeybind = Enum.KeyCode[keyName]
+                local keyName = decoded.settings.ToggleKeybind
+                
+                -- Support legacy "Enum.KeyCode.X" saving
+                if type(keyName) == "string" then
+                    keyName = keyName:gsub("Enum.KeyCode.", "")
+                    
+                    -- Check if it's a valid KeyCode to avoid errors
+                    if Enum.KeyCode[keyName] then
+                        local currentBind = self.Library.ToggleKeybind
+                        if typeof(currentBind) == "table" then
+                            -- If it's a KeyPicker table, update the value
+                            currentBind.Value = keyName 
+                        else
+                            -- If it's a raw Enum/nil, update the Enum
+                            self.Library.ToggleKeybind = Enum.KeyCode[keyName]
+                        end
+                    end
                 end
             end
 
