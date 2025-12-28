@@ -1,6 +1,124 @@
 --[[
     kiwisense
-    Fixed for loadstring usage
+    Made by samet
+
+    assign different flags to each element to prevent from configs overriding eachother
+    example is at the bottom
+
+    documentation:
+
+    function Library:Window(Data: table
+        Name/name: string
+        Version/version: string
+        Logo/logo: string
+        Size/size: UDim2
+        FadeSpeed/fadespeed: number/float
+    )
+
+    function Library:Watermark(Text: string, Logo: string)
+    function Library:KeybindsList(void)
+    function Library:Notification(Data: table
+        Name/name: string
+        Description/description: string
+        Duration/duration: number
+        Icon/icon: string
+        IconColor/iconcolor: Color3
+    )
+
+    function Window:Page(
+        Name/name: string
+        Icon/icon: string
+        Columns/columns: number
+        SubPages/subpages: boolean
+    )
+
+    function Page:SubPage(
+        Name/name: string
+        Icon/icon: string
+        Columns/columns: number
+    )
+
+    function Page/SubPage:Section(
+        Name/name: string
+        Icon/icon: string
+        Side/side: number
+    )
+
+    function Section:Toggle(
+        Name/name: string
+        Default/default: boolean
+        Flag/flag: string
+        Callback/callback: function
+    )
+
+    function Toggle:Keybind(
+        Name/name: string
+        Flag/flag: string
+        Mode/mode: string
+        Default/default: Enum.KeyCode/Enum.UserInputType
+        Callback/callback: function
+    )
+
+    function Toggle:Colorpicker(
+        Name/name: string
+        Default/default: Color3
+        Flag/flag: string
+        Alpha/alpha: number/float
+        Callback/callback: function
+    )
+
+    function Section:Slider(
+        Name/name: string
+        Min/min: number
+        Max/max: number
+        Default/default: number
+        Decimals/decimals: number
+        Flag/flag: string
+        Suffix/suffix: string
+        Callback/callback: function
+    )
+
+    function Section:Textbox(
+        Name/name: string
+        Default/default: string
+        Placeholder/placeholder: string
+        Flag/flag: string
+        Callback/callback: function
+    )
+
+    function Section:Dropdown(
+        Name/name: string
+        Items/items: table
+        Default/default: string
+        MaxSize/maxsize: number
+        Flag/flag: string
+        Multi/multi: boolean
+        Callback/callback: function
+    )
+
+    function Section:Button(
+        Name/name: string
+        Callback/callback: function
+    )
+
+    function Section:Label(Name: string, Alignment: string)
+
+    
+    function Label:Keybind(
+        Name/name: string
+        Flag/flag: string
+        Mode/mode: string
+        Default/default: Enum.KeyCode/Enum.UserInputType
+        Callback/callback: function
+    )
+
+    function Label:Colorpicker(
+        Name/name: string
+        Default/default: Color3
+        Flag/flag: string
+        Alpha/alpha: number/float
+        Callback/callback: function
+    )
 ]]
 
 local LoadingTick = os.clock()
@@ -12,8 +130,7 @@ end
 local ESPFonts = { }
 local SelectedESPFont
 
--- CHANGED: Removed 'Options' from local definition
-local MiscOptions do
+local Options, MiscOptions do
     if getgenv().Esp then 
         getgenv().Esp.Unload()
     end 
@@ -55,6 +172,26 @@ local MiscOptions do
         {"LeftUpperLeg", "LeftLowerLeg"},
         {"RightUpperLeg", "RightLowerLeg"},
     }
+
+    -- Esp is mainly hardcoded because having to make a library for everything is very useless considering we're working with not more than 10 elements at once. 
+    --[[
+        PlayersTab.AddBar({Name = "Healthbar"})
+        PlayersTab.AddText({Name = "Name"})
+        PlayersTab.AddText({Name = "Distance"})
+        PlayersTab.AddText({Name = "Weapon"})
+        PlayersTab.AddText({Name = "Flags", Color1 = rgb(225, 255, 0)})
+        PlayersTab.AddBox({Name = "Box"})
+
+        Each element will have its own concat for their flag <-- this means that if you make a text called name itll make the flags
+        ["Name"] = true; 
+        ["Name_Color"] = { Color = rgb(255, 255, 255) };
+        ["Name_Position"] = "Left";
+        which will be overwritten in the table down below. 
+
+        All elements will be updated with a metatable, look for the new index and there will be a refresh function.
+
+        I labelled the main code with important tags because some people dont know how to find my code...
+    ]]
 
     MiscOptions = {
         ["Enabled"] = false;
@@ -98,6 +235,8 @@ local MiscOptions do
         ["Distance_Text_Font"] = "Verdana";
         ["Distance_Text_Size"] = 11;
     };  
+
+    Options = setmetatable({}, {__index = MiscOptions, __newindex = function(self, key, value) Esp.RefreshElements(key, value) end});
 
     local Fonts = {}; do
         local function RegisterFont(Name, Weight, Style, Asset)
@@ -154,14 +293,6 @@ local MiscOptions do
         Esp.ScreenGui.Name = "EspObject"
 
         Esp.Cache.Enabled = false   
-
-        -- CHANGED: We now attach the options metatable to Esp.Options so it can be accessed externally
-        Esp.Options = setmetatable({}, {
-            __index = MiscOptions, 
-            __newindex = function(self, key, value) 
-                Esp.RefreshElements(key, value) 
-            end
-        });
 
         function Esp:Create(instance, options)
             local Ins = Instance.new(instance) 
@@ -927,8 +1058,7 @@ local MiscOptions do
                 return 
             end 
 
-            -- CHANGED: Use Esp.Options instead of global Options
-            if Esp.Options.Enabled == false then
+            if Options.Enabled == false then
                 return 
             end 
 
@@ -1284,14 +1414,14 @@ local MiscOptions do
     Esp:Connection(Players.PlayerAdded, function(player)
         Esp.CreateObject(player)
         for index,value in MiscOptions do 
-            Esp.Options[index] = value -- CHANGED: Updates the exposed table
+            Options[index] = value -- gotta trigger that new index
         end 
     end)
 
     Esp.Loop = RunService:BindToRenderStep("Run Loop", 0, Esp.Update)
 
     for index,value in MiscOptions do 
-        Esp.Options[index] = value -- CHANGED: Updates the exposed table
+        Options[index] = value -- gotta trigger that new index
     end
 end
 
