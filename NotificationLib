@@ -1,21 +1,12 @@
-local tweenService = cloneref and cloneref(game:GetService("TweenService")) or game:GetService("TweenService")
-local coreGui = cloneref and cloneref(game:GetService("CoreGui")) or game:GetService("CoreGui")
+-- variables
+local tweenService = game:GetService("TweenService")
+local coreGui = game:GetService("CoreGui")
 
 local insert, find, remove = table.insert, table.find, table.remove 
 local format = string.format
 
 local newInstance = Instance.new
 local fromRGB = Color3.fromRGB
-
-local protect_gui = (syn and syn.protect_gui) or (protectgui and protectgui) or function(gui) 
-    if gethui and type(gethui) == "function" then 
-        local hui = gethui()
-        if hui then
-            return hui
-        end
-    end
-    return coreGui
-end
 
 local notificationPositions = {
     ["Middle"] = UDim2.new(0.445, 0, 0.7, 0),
@@ -25,370 +16,156 @@ local notificationPositions = {
     ["Top"] = UDim2.new(0.445, 0, 0.007, 0),
     ["TopLeft"] = UDim2.new(0.06, 0, 0.001, 0),
     ["TopRight"] = UDim2.new(0.8, 0, 0.001, 0),
-}
+}; 
 
-local function randomString(length)
-    local chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-    local result = ""
-    for i = 1, length do
-        result = result .. chars:sub(math.random(1, #chars), math.random(1, #chars))
-    end
-    return result
-end
-
-local function getSafeParent(screenGui)
-    if syn and syn.protect_gui then 
-        syn.protect_gui(screenGui)
-        return coreGui
-    elseif gethui and type(gethui) == "function" then 
-        local hui = gethui()
-        if hui then
-            return hui
-        end
-    elseif identifyexecutor and type(identifyexecutor) == "function" then
-        local executor = identifyexecutor()
-        if executor == "Krnl" and gethui then
-            return gethui()
-        elseif executor == "ScriptWare" and gethui then
-            return gethui()
+-- functions 
+function protectScreenGui(screenGui)
+    -- 1. Try gethui() (Standard for modern executors like Synapse V3, Electron, Solara, Wave)
+    if gethui then 
+        screenGui.Parent = gethui()
+    -- 2. Fallback to CoreGui (if gethui fails)
+    elseif coreGui then 
+        screenGui.Parent = coreGui
+    -- 3. Last resort: PlayerGui
+    else 
+        local player = game:GetService("Players").LocalPlayer
+        if player then
+            screenGui.Parent = player:WaitForChild("PlayerGui")
         end
     end
-    return coreGui
 end
 
 function createObject(className, properties)
-    local instance = newInstance(className)
+    local instance = newInstance(className);
     
     for index, value in next, properties do 
-        pcall(function()
-            instance[index] = value 
-        end)
+        instance[index] = value 
     end
     
     return instance
 end
 
 function fadeObject(object, onTweenCompleted)
+    if not object then return end
+    
     local tweenInformation = tweenService:Create(object, TweenInfo.new(0.3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
         TextTransparency = 1,
         TextStrokeTransparency = 1
-    })
+    });
     
-    if onTweenCompleted then
-        tweenInformation.Completed:Connect(onTweenCompleted)
-    end
-    
-    tweenInformation:Play()
-    return tweenInformation
+    tweenInformation.Completed:Connect(onTweenCompleted);
+    tweenInformation:Play();
 end
 
-local notifications = {} 
-do 
+local notifications = {}; do 
     function notifications.new(settings)
-        assert(settings, "missing argument #1 in function notifications.new(settings)")
-        assert(typeof(settings) == "table", format("expected table for argument #1 in function notifications.new(settings), got %s", typeof(settings)))
+        assert(settings, "missing argument #1 in function notifications.new(settings)");
+        assert(typeof(settings) == "table", format("expected table for argument #1 in function notifications.new(settings), got %s", typeof(settings)));
         
-        local notificationSettings = {
-            ui = {
-                notificationsFrame = nil, 
-                notificationsFrame_UIListLayout = nil
-            },
-            NotificationLifetime = settings.NotificationLifetime or 3,
-            NotificationPosition = settings.NotificationPosition or "TopRight",
-            TextColor = settings.TextColor or Color3.fromRGB(255, 255, 255),
-            TextSize = settings.TextSize or 14,
-            TextStrokeTransparency = settings.TextStrokeTransparency or 0,
-            TextStrokeColor = settings.TextStrokeColor or Color3.fromRGB(0, 0, 0),
-            TextFont = settings.TextFont or Enum.Font.SourceSans,
-            MaxNotifications = settings.MaxNotifications or 10,
-            FadeTime = settings.FadeTime or 0.3,
-            Spacing = settings.Spacing or 1,
-            BackgroundColor = settings.BackgroundColor or Color3.fromRGB(30, 30, 30),
-            BackgroundTransparency = settings.BackgroundTransparency or 0.3
-        }
+        local notificationSettings = {ui = {notificationsFrame = nil, notificationsFrame_UIListLayout = nil}};
         
-        setmetatable(notificationSettings, {__index = notifications})
+        -- Defaults
+        notificationSettings.NotificationLifetime = 5
+        notificationSettings.NotificationPosition = "Middle"
+        notificationSettings.TextFont = Enum.Font.SourceSans
+        notificationSettings.TextColor = Color3.fromRGB(255, 255, 255)
+        notificationSettings.TextSize = 14
+        notificationSettings.TextStrokeTransparency = 0
+        notificationSettings.TextStrokeColor = Color3.fromRGB(0, 0, 0)
+        
+        for setting, value in next, settings do 
+            notificationSettings[setting] = value 
+        end
+        
+        setmetatable(notificationSettings, {__index = notifications});
         return notificationSettings
     end
 
     function notifications:SetNotificationLifetime(number)
-        assert(number, "missing argument #1 in function SetNotificationLifetime(number)")
-        assert(typeof(number) == "number",  format("expected number for argument #1 in function SetNotificationLifetime, got %s", typeof(number)))
-        
         self.NotificationLifetime = number 
     end
 
     function notifications:SetTextColor(color3)
-        assert(color3, "missing argument #1 in function SetTextColor(Color3)")
-        assert(typeof(color3) == "Color3", format("expected Color3 for argument #1 in function SetTextColor3, got %s", typeof(color3)))
-        
         self.TextColor = color3 
     end
     
     function notifications:SetTextSize(number)
-        assert(number, "missing argument #1 in function SetTextSize(number)")
-        assert(typeof(number) == "number",  format("expected number for argument #1 in function SetTextSize, got %s", typeof(number)))
-        
         self.TextSize = number 
     end
     
     function notifications:SetTextStrokeTransparency(number)
-        assert(number, "missing argument #1 in function SetTextStrokeTransparency(number)")
-        assert(typeof(number) == "number",  format("expected number for argument #1 in function SetTextStrokeTransparency, got %s", typeof(number)))
-        
         self.TextStrokeTransparency = number 
     end
 
     function notifications:SetTextStrokeColor(color3)
-        assert(color3, "missing argument #1 in function SetTextStrokeColor(Color3)")
-        assert(typeof(color3) == "Color3", format("expected Color3 for argument #1 in function SetTextStrokeColor, got %s", typeof(color3)))
-        
         self.TextStrokeColor = color3 
     end
     
     function notifications:SetTextFont(font)
-        assert(font, "missing argument #1 in function SetTextFont(Font)")
-        assert((typeof(font) == "string" or typeof(font) == "EnumItem"))
-        
-        self.TextFont = Enum.Font[font] or font
-    end
-    
-    function notifications:SetPosition(position)
-        assert(position, "missing argument #1 in function SetPosition(string)")
-        assert(typeof(position) == "string", format("expected string for argument #1 in function SetPosition, got %s", typeof(position)))
-        
-        self.NotificationPosition = position
-        if self.ui.notificationsFrame then
-            self.ui.notificationsFrame.Position = notificationPositions[position] or notificationPositions.TopRight
+        if typeof(font) == "EnumItem" then
+            self.TextFont = font
+        elseif typeof(font) == "string" then
+            self.TextFont = Enum.Font[font]
         end
     end
     
-    function notifications:SetMaxNotifications(number)
-        assert(number, "missing argument #1 in function SetMaxNotifications(number)")
-        assert(typeof(number) == "number", format("expected number for argument #1 in function SetMaxNotifications, got %s", typeof(number)))
-        
-        self.MaxNotifications = number
-    end
-    
-    function notifications:SetBackground(color3, transparency)
-        if color3 then
-            self.BackgroundColor = color3
-        end
-        if transparency then
-            self.BackgroundTransparency = transparency
-        end
-    end
-
     function notifications:BuildNotificationUI()
-        local screenGuiName = randomString(12)
-        local frameName = randomString(10)
-        local layoutName = randomString(8)
-        
-        if self.screenGui and self.screenGui.Parent then
-            pcall(function()
-                self.screenGui:Destroy()
-            end)
+        -- Clean up previous instance if it exists in global env
+        if getgenv().notifications_screenGui and getgenv().notifications_screenGui.Parent then 
+            getgenv().notifications_screenGui:Destroy();
         end
         
-        self.screenGui = createObject("ScreenGui", {
-            Name = screenGuiName,
+        local sg = createObject("ScreenGui", {
+            Name = "NobulemNotifications",
             ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
-            DisplayOrder = 999,
-            ResetOnSpawn = false,
-            IgnoreGuiInset = true
-        })
+            ResetOnSpawn = false
+        });
         
-        local parent = getSafeParent(self.screenGui)
-        self.screenGui.Parent = parent
+        getgenv().notifications_screenGui = sg
+        protectScreenGui(sg);
     
         self.ui.notificationsFrame = createObject("Frame", {
-            Name = frameName,
-            Parent = self.screenGui,
-            BackgroundColor3 = self.BackgroundColor,
-            BackgroundTransparency = self.BackgroundTransparency,
-            Position = notificationPositions[self.NotificationPosition] or notificationPositions.TopRight,
-            Size = UDim2.new(0, 236, 0, 215),
-            BorderSizePixel = 0,
-            ClipsDescendants = true
-        })
-        
-        local cornerRadius = createObject("UICorner", {
-            Parent = self.ui.notificationsFrame,
-            CornerRadius = UDim.new(0, 4)
-        })
+            Name = "notificationsFrame",
+            Parent = sg,
+            BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+            BackgroundTransparency = 1.000,
+            Position = notificationPositions[self.NotificationPosition] or notificationPositions["Middle"],
+            Size = UDim2.new(0, 236, 0, 215)
+        });
     
         self.ui.notificationsFrame_UIListLayout = createObject("UIListLayout", {
-            Name = layoutName,
+            Name = "notificationsFrame_UIListLayout",
             Parent = self.ui.notificationsFrame,
-            Padding = UDim.new(0, self.Spacing or 1),
+            Padding = UDim.new(0, 1),
             SortOrder = Enum.SortOrder.LayoutOrder,
-            HorizontalAlignment = Enum.HorizontalAlignment.Right,
-            VerticalAlignment = Enum.VerticalAlignment.Bottom
-        })
-        
-        local padding = createObject("UIPadding", {
-            Parent = self.ui.notificationsFrame,
-            PaddingTop = UDim.new(0, 4),
-            PaddingBottom = UDim.new(0, 4),
-            PaddingLeft = UDim.new(0, 4),
-            PaddingRight = UDim.new(0, 4)
-        })
-        
-        self.ui.notificationsFrame_UIListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-            local contentSize = self.ui.notificationsFrame_UIListLayout.AbsoluteContentSize
-            self.ui.notificationsFrame.Size = UDim2.new(0, math.max(236, contentSize.X + 20), 0, math.min(215, contentSize.Y + 20))
-        end)
+            VerticalAlignment = Enum.VerticalAlignment.Bottom -- Stacks upwards from position
+        });
     end
 
     function notifications:Notify(text)
-        assert(text, "missing argument #1 in function Notify(string)")
-        assert(typeof(text) == "string", format("expected string for argument #1 in function Notify, got %s", typeof(text)))
-        
-        if not self.ui.notificationsFrame then
-            self:BuildNotificationUI()
-        end
-        
-        local children = self.ui.notificationsFrame:GetChildren()
-        local notificationCount = 0
-        for _, child in ipairs(children) do
-            if child:IsA("TextLabel") and child.Name == "notification" then
-                notificationCount = notificationCount + 1
-            end
-        end
-        
-        if notificationCount >= (self.MaxNotifications or 10) then
-            for _, child in ipairs(children) do
-                if child:IsA("TextLabel") and child.Name == "notification" then
-                    local oldestChild = child
-                    local oldestTime = child.LayoutOrder or 0
-                    for _, other in ipairs(children) do
-                        if other:IsA("TextLabel") and other.Name == "notification" and (other.LayoutOrder or 0) < oldestTime then
-                            oldestChild = other
-                            oldestTime = other.LayoutOrder or 0
-                        end
-                    end
-                    fadeObject(oldestChild, function()
-                        pcall(function()
-                            oldestChild:Destroy()
-                        end)
-                    end)
-                    break
-                end
-            end
-        end
-        
-        local notificationId = randomString(8)
-        local order = tick() * 1000
-        
+        if not self.ui.notificationsFrame then return end
+
         local notification = createObject("TextLabel", {
             Name = "notification",
             Parent = self.ui.notificationsFrame,
-            BackgroundColor3 = Color3.fromRGB(40, 40, 40),
-            BackgroundTransparency = 0.2,
-            Size = UDim2.new(0, 222, 0, 0),
+            BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+            BackgroundTransparency = 1.000,
+            Size = UDim2.new(1, 0, 0, self.TextSize + 4), -- Dynamic height based on size
             Text = text,
+            
             Font = self.TextFont,
             TextColor3 = self.TextColor,
             TextSize = self.TextSize,
             TextStrokeColor3 = self.TextStrokeColor,
             TextStrokeTransparency = self.TextStrokeTransparency,
-            TextWrapped = true,
-            RichText = true,
-            LayoutOrder = order,
-            BorderSizePixel = 0,
-            ClipsDescendants = true
-        })
-        
-        local notifCorner = createObject("UICorner", {
-            Parent = notification,
-            CornerRadius = UDim.new(0, 4)
-        })
-        
-        local textBounds = notification.TextBounds
-        local textHeight = textBounds.Y + 8
-        notification.Size = UDim2.new(0, math.min(222, textBounds.X + 20), 0, textHeight)
-        
-        notification.TextTransparency = 1
-        notification.TextStrokeTransparency = 1
-        notification.BackgroundTransparency = 1
-        
-        task.wait(0.05)
-        
-        local appearTween = tweenService:Create(notification, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-            TextTransparency = self.TextStrokeTransparency or 0,
-            TextStrokeTransparency = self.TextStrokeTransparency or 0,
-            BackgroundTransparency = 0.2
-        })
-        appearTween:Play()
+            ZIndex = 10
+        });  
     
         task.delay(self.NotificationLifetime, function()
-            pcall(function()
-                fadeObject(notification, function()
-                    pcall(function()
-                        notification:Destroy()
-                    end)
-                end)
-            end)
-        end)
-        
-        return notification
-    end
-    
-    function notifications:NotifySuccess(title, message)
-        local formattedText = string.format("<font color='#00FF00'>[✓]</font> <font color='#FFFFFF'>%s</font>", title or "")
-        if message then
-            formattedText = formattedText .. "\n" .. message
-        end
-        return self:Notify(formattedText)
-    end
-    
-    function notifications:NotifyError(title, message)
-        local formattedText = string.format("<font color='#FF0000'>[✗]</font> <font color='#FFFFFF'>%s</font>", title or "")
-        if message then
-            formattedText = formattedText .. "\n" .. message
-        end
-        return self:Notify(formattedText)
-    end
-    
-    function notifications:NotifyWarning(title, message)
-        local formattedText = string.format("<font color='#FFFF00'>[⚠]</font> <font color='#FFFFFF'>%s</font>", title or "")
-        if message then
-            formattedText = formattedText .. "\n" .. message
-        end
-        return self:Notify(formattedText)
-    end
-    
-    function notifications:NotifyInfo(title, message)
-        local formattedText = string.format("<font color='#00FFFF'>[ℹ]</font> <font color='#FFFFFF'>%s</font>", title or "")
-        if message then
-            formattedText = formattedText .. "\n" .. message
-        end
-        return self:Notify(formattedText)
-    end
-    
-    function notifications:ClearAll()
-        if self.ui.notificationsFrame then
-            for _, child in ipairs(self.ui.notificationsFrame:GetChildren()) do
-                if child:IsA("TextLabel") and child.Name == "notification" then
-                    fadeObject(child, function()
-                        pcall(function()
-                            child:Destroy()
-                        end)
-                    end)
-                end
-            end
-        end
-    end
-    
-    function notifications:Destroy()
-        if self.screenGui and self.screenGui.Parent then
-            pcall(function()
-                self.screenGui:Destroy()
-            end)
-        end
-        self.ui.notificationsFrame = nil
-        self.ui.notificationsFrame_UIListLayout = nil
-        self.screenGui = nil
+            fadeObject(notification, function()
+                if notification then notification:Destroy() end
+            end);
+        end);
     end
 end
 
