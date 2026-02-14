@@ -1,4 +1,3 @@
--- variables
 local tweenService = game:GetService("TweenService")
 local coreGui = game:GetService("CoreGui")
 
@@ -16,17 +15,13 @@ local notificationPositions = {
     ["Top"] = UDim2.new(0.445, 0, 0.007, 0),
     ["TopLeft"] = UDim2.new(0.06, 0, 0.001, 0),
     ["TopRight"] = UDim2.new(0.8, 0, 0.001, 0),
-}; 
+}
 
--- functions 
 function protectScreenGui(screenGui)
-    -- 1. Try gethui() (Standard for modern executors like Synapse V3, Electron, Solara, Wave)
     if gethui then 
         screenGui.Parent = gethui()
-    -- 2. Fallback to CoreGui (if gethui fails)
     elseif coreGui then 
         screenGui.Parent = coreGui
-    -- 3. Last resort: PlayerGui
     else 
         local player = game:GetService("Players").LocalPlayer
         if player then
@@ -36,7 +31,7 @@ function protectScreenGui(screenGui)
 end
 
 function createObject(className, properties)
-    local instance = newInstance(className);
+    local instance = newInstance(className)
     
     for index, value in next, properties do 
         instance[index] = value 
@@ -51,20 +46,19 @@ function fadeObject(object, onTweenCompleted)
     local tweenInformation = tweenService:Create(object, TweenInfo.new(0.3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
         TextTransparency = 1,
         TextStrokeTransparency = 1
-    });
+    })
     
-    tweenInformation.Completed:Connect(onTweenCompleted);
-    tweenInformation:Play();
+    tweenInformation.Completed:Connect(onTweenCompleted)
+    tweenInformation:Play()
 end
 
-local notifications = {}; do 
+local notifications = {} do 
     function notifications.new(settings)
-        assert(settings, "missing argument #1 in function notifications.new(settings)");
-        assert(typeof(settings) == "table", format("expected table for argument #1 in function notifications.new(settings), got %s", typeof(settings)));
+        assert(settings, "missing argument #1 in function notifications.new(settings)")
+        assert(typeof(settings) == "table", format("expected table for argument #1 in function notifications.new(settings), got %s", typeof(settings)))
         
-        local notificationSettings = {ui = {notificationsFrame = nil, notificationsFrame_UIListLayout = nil}};
+        local notificationSettings = {ui = {notificationsFrame = nil, notificationsFrame_UIListLayout = nil}}
         
-        -- Defaults
         notificationSettings.NotificationLifetime = 5
         notificationSettings.NotificationPosition = "Middle"
         notificationSettings.TextFont = Enum.Font.SourceSans
@@ -77,7 +71,7 @@ local notifications = {}; do
             notificationSettings[setting] = value 
         end
         
-        setmetatable(notificationSettings, {__index = notifications});
+        setmetatable(notificationSettings, {__index = notifications})
         return notificationSettings
     end
 
@@ -110,19 +104,18 @@ local notifications = {}; do
     end
     
     function notifications:BuildNotificationUI()
-        -- Clean up previous instance if it exists in global env
         if getgenv().notifications_screenGui and getgenv().notifications_screenGui.Parent then 
-            getgenv().notifications_screenGui:Destroy();
+            getgenv().notifications_screenGui:Destroy()
         end
         
         local sg = createObject("ScreenGui", {
             Name = "NobulemNotifications",
             ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
             ResetOnSpawn = false
-        });
+        })
         
         getgenv().notifications_screenGui = sg
-        protectScreenGui(sg);
+        protectScreenGui(sg)
     
         self.ui.notificationsFrame = createObject("Frame", {
             Name = "notificationsFrame",
@@ -131,15 +124,15 @@ local notifications = {}; do
             BackgroundTransparency = 1.000,
             Position = notificationPositions[self.NotificationPosition] or notificationPositions["Middle"],
             Size = UDim2.new(0, 236, 0, 215)
-        });
+        })
     
         self.ui.notificationsFrame_UIListLayout = createObject("UIListLayout", {
             Name = "notificationsFrame_UIListLayout",
             Parent = self.ui.notificationsFrame,
             Padding = UDim.new(0, 1),
             SortOrder = Enum.SortOrder.LayoutOrder,
-            VerticalAlignment = Enum.VerticalAlignment.Bottom -- Stacks upwards from position
-        });
+            VerticalAlignment = Enum.VerticalAlignment.Bottom
+        })
     end
 
     function notifications:Notify(text)
@@ -150,7 +143,7 @@ local notifications = {}; do
             Parent = self.ui.notificationsFrame,
             BackgroundColor3 = Color3.fromRGB(255, 255, 255),
             BackgroundTransparency = 1.000,
-            Size = UDim2.new(1, 0, 0, self.TextSize + 4), -- Dynamic height based on size
+            Size = UDim2.new(1, 0, 0, self.TextSize + 4),
             Text = text,
             
             Font = self.TextFont,
@@ -159,13 +152,13 @@ local notifications = {}; do
             TextStrokeColor3 = self.TextStrokeColor,
             TextStrokeTransparency = self.TextStrokeTransparency,
             ZIndex = 10
-        });  
+        })
     
         task.delay(self.NotificationLifetime, function()
             fadeObject(notification, function()
                 if notification then notification:Destroy() end
-            end);
-        end);
+            end)
+        end)
     end
 end
 
