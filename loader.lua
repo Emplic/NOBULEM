@@ -22,7 +22,7 @@ end
 getgenv().nobulemKeySystemLoaded = true
 
 
-local notificationLibrary = loadstring(game:HttpGet("https://raw.githubusercontent.com/laagginq/ui-libraries/main/xaxas-notification/src.lua"))();
+local notificationLibrary = loadstring(game:HttpGet("https://raw.githubusercontent.com/Emplic/NOBULEM/refs/heads/main/NotificationLib"))();
 local notifications = notificationLibrary.new({            
     NotificationLifetime = 3, 
     NotificationPosition = "Middle",
