@@ -3585,14 +3585,14 @@
 
         function library:init_config(window) 
             window:seperator({name = "Settings"})
-            local main = window:tab({name = "Configs", tabs = {"Main"}})
+            local main = window:tab({name = "Configs", icon = 'save', tabs = {"Main"}})
             
             local column = main:column({})
-            local section = column:section({name = "Configs", size = 1, default = true, icon = "save"})
+            local section = column:section({name = "Configs", size = 1, default = true, icon = "list"})
             config_holder = section:list({options = {"Report", "This", "Error", "To", "Finobe"}, callback = function(option) end, flag = "config_name_list"}); library:update_config_list()
             
             local column = main:column({})
-            local section = column:section({name = "Settings", side = "right", size = 1, default = true, icon = "rbxassetid://129380150574313"})
+            local section = column:section({name = "Settings", side = "right", size = 1, default = true, icon = "settings"})
             section:textbox({name = "Config name:", flag = "config_name_text"})
             section:button({name = "Save", callback = function() writefile(library.directory .. "/configs/" .. flags["config_name_text"] or flags["config_name_list"] .. ".cfg", library:get_config()) library:update_config_list() notifications:create_notification({name = "Configs", info = "Saved config to:\n" .. flags["config_name_list"] or flags["config_name_text"]}) end}) 
             section:button({name = "Load", callback = function() library:load_config(readfile(library.directory .. "/configs/" .. flags["config_name_list"] .. ".cfg"))  library:update_config_list() notifications:create_notification({name = "Configs", info = "Loaded config:\n" .. flags["config_name_list"]}) end})
