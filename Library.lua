@@ -202,74 +202,39 @@
             font = Font.new(SemiBold, Enum.FontWeight.Regular, Enum.FontStyle.Normal);
         }
     end
+--
 
-    local lucide_cache = {}
-    local lucide_folder = library.directory .. "/lucide"
-    if not isfolder(lucide_folder) then
-        makefolder(lucide_folder)
-    end
+-- Lucide Icons
+    local lucide_fetch_ok, lucide_icons = pcall(function()
+        return (loadstring(game:HttpGet("https://raw.githubusercontent.com/deividcomsono/lucide-roblox-direct/refs/heads/main/source.lua")))()
+    end)
 
-    local function get_lucide_icon(name)
-        if lucide_cache[name] then
-            return lucide_cache[name]
-        end
-
-        local file_path = lucide_folder .. "/" .. name .. ".png"
-
-        if not isfile(file_path) then
-            local ok, data = pcall(function()
-                return game:HttpGet("https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/" .. name .. ".svg")
-            end)
-
-            if not ok or not data then
-                return nil
-            end
-
-            local png_ok, png_data = pcall(function()
-                return game:HttpGet("https://raw.githubusercontent.com/phosphor-icons/core/main/assets/regular/" .. name .. ".png")
-            end)
-
-            local cdn_ok, cdn_data = pcall(function()
-                return game:HttpGet("https://api.iconify.design/lucide/" .. name .. ".svg?download=1")
-            end)
-
-            local write_ok = pcall(function()
-                writefile(file_path, ok and data or "")
-            end)
-
-            if not write_ok then
-                return nil
-            end
-        end
-
-        local asset_ok, asset_id = pcall(getcustomasset, file_path)
-        if asset_ok and asset_id then
-            lucide_cache[name] = asset_id
-            return asset_id
-        end
-
+    local function get_icon(name)
+        if not name or not lucide_fetch_ok or not lucide_icons then return nil end
+        local ok, icon = pcall(lucide_icons.GetAsset, name)
+        if ok and icon then return icon end
         return nil
     end
 
-    local function resolve_icon(icon_value)
-        if not icon_value then
-            return nil
+    local function apply_icon(image_label, name)
+        if not name then return end
+        local is_roblox_asset = type(name) == "string" and (
+            name:sub(1, 14) == "rbxassetid://" or
+            name:sub(1, 4) == "http" or
+            name:sub(1, 9) == "rbxasset:"
+        )
+        if is_roblox_asset then
+            image_label.Image = name
+            return
         end
-
-        if type(icon_value) == "string" then
-            if icon_value:sub(1, 8) == "lucide://" then
-                local name = icon_value:sub(9)
-                return get_lucide_icon(name)
-            elseif icon_value:sub(1, 4) == "http" or icon_value:sub(1, 12) == "rbxassetid://" then
-                return icon_value
-            else
-                return get_lucide_icon(icon_value)
-            end
+        local icon = get_icon(name)
+        if icon then
+            image_label.Image = icon.Url
+            image_label.ImageRectOffset = icon.ImageRectOffset
+            image_label.ImageRectSize = icon.ImageRectSize
         end
-
-        return icon_value
     end
-
+--
 
 -- Library functions 
     -- Misc functions
@@ -816,8 +781,10 @@
         function library:tab(properties)
             local cfg = {
                 name = properties.name or properties.Name or "visuals"; 
-                icon = resolve_icon(properties.icon or properties.Icon) or "http://www.roblox.com/asset/?id=6034767608";
-                    tabs = properties.tabs or properties.Tabs or {"Main", "Misc.", "Settings"};
+                icon = properties.icon or properties.Icon or "http://www.roblox.com/asset/?id=6034767608";
+                
+                -- multi 
+                tabs = properties.tabs or properties.Tabs or {"Main", "Misc.", "Settings"};
                 pages = {}; -- data store for multi sections
                 current_multi; 
                 
@@ -858,7 +825,7 @@
                         BorderColor3 = rgb(0, 0, 0);
                         Parent = items[ "button" ];
                         AnchorPoint = vec2(0, 0.5);
-                        Image = cfg.icon or "http://www.roblox.com/asset/?id=6034767608";
+                        Image = "";
                         BackgroundTransparency = 1;
                         Position = dim2(0, 10, 0.5, 0);
                         Name = "\0";
@@ -866,6 +833,7 @@
                         BorderSizePixel = 0;
                         BackgroundColor3 = rgb(255, 255, 255)
                     }); library:apply_theme(items[ "icon" ], "accent", "ImageColor3");
+                    apply_icon(items[ "icon" ], cfg.icon);
                     
                     items[ "name" ] = library:create( "TextLabel" , {
                         FontFace = fonts.font;
@@ -931,18 +899,10 @@
                     });                        
 
                     for _, section in cfg.tabs do
-                        local data = {items = {}}
-
-                        local tab_label, tab_icon_asset
-                        if type(section) == "table" then
-                            tab_label = section.name or section.Name or tostring(_)
-                            tab_icon_asset = resolve_icon(section.icon or section.Icon)
-                        else
-                            tab_label = section
-                            tab_icon_asset = nil
-                        end
+                        local data = {items = {}} 
 
                         local multi_items = data.items; do 
+                            -- Button
                                 multi_items[ "button" ] = library:create( "TextButton" , {
                                     FontFace = fonts.font;
                                     TextColor3 = rgb(255, 255, 255);
@@ -959,28 +919,12 @@
                                     TextSize = 16;
                                     BackgroundColor3 = rgb(25, 25, 29)
                                 });
-
-                                if tab_icon_asset then
-                                    multi_items[ "tab_icon" ] = library:create( "ImageLabel" , {
-                                        ImageColor3 = rgb(62, 62, 63);
-                                        BorderColor3 = rgb(0, 0, 0);
-                                        Parent = multi_items[ "button" ];
-                                        AnchorPoint = vec2(0, 0.5);
-                                        Image = tab_icon_asset;
-                                        BackgroundTransparency = 1;
-                                        Position = dim2(0, 10, 0.5, 0);
-                                        Name = "\0";
-                                        Size = dim2(0, 16, 0, 16);
-                                        BorderSizePixel = 0;
-                                        BackgroundColor3 = rgb(255, 255, 255)
-                                    });
-                                end
                                 
                                 multi_items[ "name" ] = library:create( "TextLabel" , {
                                     FontFace = fonts.font;
                                     TextColor3 = rgb(62, 62, 63);
                                     BorderColor3 = rgb(0, 0, 0);
-                                    Text = tab_label;
+                                    Text = section;
                                     Parent = multi_items[ "button" ];
                                     Name = "\0";
                                     Size = dim2(0, 0, 1, 0);
@@ -995,7 +939,7 @@
                                 library:create( "UIPadding" , {
                                     Parent = multi_items[ "name" ];
                                     PaddingRight = dim(0, 5);
-                                    PaddingLeft = dim(0, tab_icon_asset and 24 or 5)
+                                    PaddingLeft = dim(0, 5)
                                 });
                                 
                                 multi_items[ "accent" ] = library:create( "Frame" , {
@@ -1062,8 +1006,11 @@
                         data.accent = multi_items[ "accent" ]
                         data.button = multi_items[ "button" ]
                         data.page = multi_items[ "tab" ]
-                        data.tab_icon = multi_items[ "tab_icon" ]
                         data.parent = setmetatable(data, library):sub_tab({}).items[ "tab_parent" ]
+                        
+                        -- Old column code
+                        -- data.left = multi_items[ "left" ]
+                        -- data.right = multi_items[ "right" ]
 
 						function data.open_page()
 							local page = cfg.current_multi; 
@@ -1080,9 +1027,6 @@
                                 library:tween(page.text, {TextColor3 = rgb(62, 62, 63)})
                                 library:tween(page.accent, {BackgroundTransparency = 1})
                                 library:tween(page.button, {BackgroundTransparency = 1})
-                                if page.tab_icon then
-                                    library:tween(page.tab_icon, {ImageColor3 = rgb(62, 62, 63)})
-                                end
 
                                 page.page.Visible = false
                                 page.page.Parent = library[ "cache" ] 
@@ -1091,9 +1035,6 @@
                             library:tween(data.text, {TextColor3 = rgb(255, 255, 255)})
                             library:tween(data.accent, {BackgroundTransparency = 0})
                             library:tween(data.button, {BackgroundTransparency = 0})
-                            if data.tab_icon then
-                                library:tween(data.tab_icon, {ImageColor3 = themes.preset.accent})
-                            end
                             library:tween(data.page, {Size = dim2(1, 0, 1, 0)}, Enum.EasingStyle.Quad, 0.4)
 
                             data.page.Visible = true
@@ -1266,7 +1207,7 @@
                 side = properties.side or properties.Side or "left";
                 default = properties.default or properties.Default or false;
                 size = properties.size or properties.Size or self.size or 0.5; 
-                icon = resolve_icon(properties.icon or properties.Icon) or "http://www.roblox.com/asset/?id=6022668898";
+                icon = properties.icon or properties.Icon or "http://www.roblox.com/asset/?id=6022668898";
                 fading_toggle = properties.fading or properties.Fading or false;
                 items = {};
             };
@@ -1372,7 +1313,7 @@
                     BorderColor3 = rgb(0, 0, 0);
                     Parent = items[ "button" ];
                     AnchorPoint = vec2(0, 0.5);
-                    Image = cfg.icon or "http://www.roblox.com/asset/?id=6022668898";
+                    Image = "";
                     BackgroundTransparency = 1;
                     Position = dim2(0, 10, 0.5, 0);
                     Name = "\0";
@@ -1380,6 +1321,7 @@
                     BorderSizePixel = 0;
                     BackgroundColor3 = rgb(255, 255, 255)
                 }); library:apply_theme(items[ "Icon" ], "accent", "ImageColor3");
+                apply_icon(items[ "Icon" ], cfg.icon);
                 
                 items[ "section_title" ] = library:create( "TextLabel" , {
                     FontFace = fonts.font;
@@ -3646,7 +3588,7 @@
             local main = window:tab({name = "Configs", tabs = {"Main"}})
             
             local column = main:column({})
-            local section = column:section({name = "Configs", size = 1, default = true, icon = "rbxassetid://139628202576511"})
+            local section = column:section({name = "Configs", size = 1, default = true, icon = "save"})
             config_holder = section:list({options = {"Report", "This", "Error", "To", "Finobe"}, callback = function(option) end, flag = "config_name_list"}); library:update_config_list()
             
             local column = main:column({})
