@@ -6866,12 +6866,13 @@ Library.CreateSettingsPage = function(self, Window, Watermark, KeybindList)
 						Library.ThemeColorpickers[Index] = ThemeSection:Label(Index, "Left"):Colorpicker({Name = Index, Default = Value, Flag = "Theme"..Index, Callback = function(Value) 
 							Library.Theme[Index] = Value
 							Library:ChangeTheme(Index, Value)
-						end})
-					end
-				end
-			end
-		end
-	end
+                            end})
+                        end
+                    end
+                end
+            end
+        end
+    end
 end
 
 getgenv().Library = Library
