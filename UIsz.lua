@@ -6530,11 +6530,20 @@ local Library do
 		end
 	end
 
-Library.CreateSettingsPage = function(self, Window, Watermark, KeybindList)
+	Library.CreateSettingsPage = function(self, Window, Watermark, KeybindList)
 	local SettingsPage = Window:Page({
 		Name = "Settings",
 		Columns = 2
 	})
+	
+	-- Create Watermark and KeybindList if not provided
+	if not Watermark then
+		Watermark = self:Watermark(Window.Name or "SolixHub")
+	end
+	if not KeybindList then
+		KeybindList = self:KeybindList()
+	end
+	
 	do -- pasted from my other ui
 		do
 			do -- Configs
@@ -6650,9 +6659,7 @@ Library.CreateSettingsPage = function(self, Window, Watermark, KeybindList)
 						Flag = "WatermarkEnabled",
 						Default = false,
 						Callback = function(Value)
-							if Watermark then
-								Watermark:SetVisible(Value)
-							end
+							Watermark:SetVisible(Value)
 						end
 					})
 
@@ -6661,9 +6668,7 @@ Library.CreateSettingsPage = function(self, Window, Watermark, KeybindList)
 						Flag = "Keybind list",
 						Default = false,
 						Callback = function(Value)
-							if KeybindList then
-								KeybindList:SetVisible(Value)
-							end
+							KeybindList:SetVisible(Value)
 						end
 					})
 
@@ -6866,14 +6871,14 @@ Library.CreateSettingsPage = function(self, Window, Watermark, KeybindList)
 						Library.ThemeColorpickers[Index] = ThemeSection:Label(Index, "Left"):Colorpicker({Name = Index, Default = Value, Flag = "Theme"..Index, Callback = function(Value) 
 							Library.Theme[Index] = Value
 							Library:ChangeTheme(Index, Value)
-                            end})
-                        end
-                    end
-                end
-            end
-        end
-    end
+						end})
+					end
+				end
+			end
+		end
+	end
 end
-
+	return SettingsPage, Watermark, KeybindList
+end
 getgenv().Library = Library
 return Library
